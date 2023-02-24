@@ -41,6 +41,10 @@ Presentations at conferences on the topic of research
 ================================================
 1. 
 
+Supplementations
+================
+1. `Link review <https://docs.google.com/document/d/1-P76pFjZ2E4BIjLVU8KY1NC7g1Qt-YFh6zX-V67FTUU/edit>`_.
+
 Software modules developed as part of the study
 ======================================================
 1. A python package *mylib* with all implementation `here <https://github.com/intsystems/ProjectTemplate/tree/master/src>`_.
