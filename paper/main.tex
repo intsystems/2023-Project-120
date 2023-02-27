@@ -11,10 +11,9 @@
 \usepackage{microtype}
 \usepackage{lipsum}
 \usepackage{graphicx}
-\usepackage{natbib}
+\usepackage[square,numbers]{natbib}
+\bibliographystyle{abbrvnat}
 \usepackage{doi}
-\usepackage{biblatex}
-\addbibresource{references.bib}
 
 
 \title{Differentiable algorithm for searching ensembles of deep learning models with diversity control}
@@ -86,7 +85,7 @@ datasets and compare the resulting ensembles with ones sampled by other searchin
 \section{Introduction}
 
 Nowadays algorithms of neural architecture search (NAS) are well-explored and prooved to be an effective way of creating
-more effective and efficient neural networks. Such algorithms use different ways to make problem diffirentiable so it can
+more effective and efficient neural networks, \citep{darts, robustify, xnas}. Such algorithms use different ways to make problem diffirentiable so it can
 be solved by wide range of methods for smooth optimization problems. On the other hand, neural ensemble search (NES) is
 modern and not as well investigated problem as NAS, although it is known that ensembles of deep learning models show better
 results in different applied problems.
@@ -95,15 +94,15 @@ Our paper investigates an algorithm of sampling deep learning models in a new wa
 were discribed and investigated, our scheme has uniqeue set of techniques that gives compatible results and has its own sphere
 of implimentations.
 
-First of all, we use DARTS as our basic NAS algorithm. It is prooved to be an effective architecture search algorithm. Some
-modern investigations have shown that the algorithm can be upgrated, but the modernisations do not make tangible difference
+First of all, we use DARTS \citep{darts} as our basic NAS algorithm. It is prooved to be an effective architecture search algorithm. Some
+modern investigations have shown that the algorithm can be upgrated \citep{p-darts, sdarts, darts-}, but the modernisations do not make tangible difference
 and are mainly made for some specific cases. So in our paper we are focusing on ensemble sampling, so slightly different base
 model does not change anything in resulting ensemble.
 
 Second of all, we use hypernetwork in our sampling algorithm. Hypernetwork is small network so it does not
-consume too much computational capacity. This network contains information about another network, which is called target network.
+consume too much computational capacity \citep{hypernetworks}. This network contains information about another network, which is called target network.
 This approach is not new: hypernetworks and supernetworks were intended to control different characteristics such as
-complexity of acrhitecture or parameters of the target model in several modern investigations. In our algorithm it controls 
+complexity of acrhitecture \citep{darts-cc} or parameters of the target model \citep{cont-learn} in several modern investigations. In our algorithm it controls 
 diversity of the target models, so every sampled model differs from previously sampled ones.
 
 The hypernetwork uses Jensen-Shennon divergence (JSd) to measure difference between two architectures which is simmetric and finite
@@ -118,6 +117,80 @@ To sum up the scheme of our method:
     \item inferencing answer is ensemble of the sampled deep learning models
 \end{enumerate}
 
-\printbibliography
+
+\section{Headings: first level}
+\label{sec:headings}
+
+\lipsum[4] See Section \ref{sec:headings}.
+
+\subsection{Headings: second level}
+\lipsum[5]
+\begin{equation}
+	\xi _{ij}(t)=P(x_{t}=i,x_{t+1}=j|y,v,w;\theta)= {\frac {\alpha _{i}(t)a^{w_t}_{ij}\beta _{j}(t+1)b^{v_{t+1}}_{j}(y_{t+1})}{\sum _{i=1}^{N} \sum _{j=1}^{N} \alpha _{i}(t)a^{w_t}_{ij}\beta _{j}(t+1)b^{v_{t+1}}_{j}(y_{t+1})}}
+\end{equation}
+
+\subsubsection{Headings: third level}
+\lipsum[6]
+
+\paragraph{Paragraph}
+\lipsum[7]
+
+
+
+\section{Examples of citations, figures, tables, references}
+\label{sec:others}
+
+\subsection{Citations}
+Citations use \verb+natbib+. The documentation may be found at
+\begin{center}
+	\url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf}
+\end{center}
+
+\subsection{Figures}
+\lipsum[10]
+See Figure \ref{fig:fig1}. Here is how you add footnotes. \footnote{Sample of the first footnote.}
+\lipsum[11]
+
+\begin{figure}
+	\centering
+
+	\caption{Sample figure caption.}
+	\label{fig:fig1}
+\end{figure}
+
+\subsection{Tables}
+See awesome Table~\ref{tab:table}.
+
+The documentation for \verb+booktabs+ (`Publication quality tables in LaTeX') is available from:
+\begin{center}
+	\url{https://www.ctan.org/pkg/booktabs}
+\end{center}
+
+
+\begin{table}
+	\caption{Sample table title}
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\multicolumn{2}{c}{Part}                   \\
+		\cmidrule(r){1-2}
+		Name     & Description     & Size ($\mu$m) \\
+		\midrule
+		Dendrite & Input terminal  & $\sim$100     \\
+		Axon     & Output terminal & $\sim$10      \\
+		Soma     & Cell body       & up to $10^6$  \\
+		\bottomrule
+	\end{tabular}
+	\label{tab:table}
+\end{table}
+
+\subsection{Lists}
+\begin{itemize}
+	\item Lorem ipsum dolor sit amet
+	\item consectetur adipiscing elit.
+	\item Aliquam dignissim blandit est, in dictum tortor gravida eget. In ac rutrum magna.
+\end{itemize}
+
+\bibliography{references}
 
 \end{document}
