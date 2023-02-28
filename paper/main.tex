@@ -11,8 +11,11 @@
 \usepackage{microtype}
 \usepackage{lipsum}
 \usepackage{graphicx}
+\graphicspath{{../figures}}
 \usepackage[square,numbers]{natbib}
 \bibliographystyle{abbrvnat}
+\usepackage{amsmath}
+
 \usepackage{doi}
 
 
@@ -59,7 +62,7 @@
 \hypersetup{
 pdftitle={Differentiable algorithm for searching ensembles of deep learning models with diversity control},
 pdfsubject={q-bio.NC, q-bio.QM},
-pdfauthor={K. Yakovlev, O.Bakhteev, K. Petrushina, P. Babkin},
+pdfauthor={K.Yakovlev, O.Bakhteev, K.Petrushina, P.Babkin},
 pdfkeywords={First keyword, Second keyword, More},
 }
 
@@ -70,43 +73,43 @@ pdfkeywords={First keyword, Second keyword, More},
 	
 This paper is developed to introduce a new method of creating ensembles of deep learning models. 
 Many modern researches were focused on creating effective and efficient algorithms of differentiable architecture search,
-missing oppotunity to create ensembles of deep learning models. This approach gives impressive results
+missing opportunity to create ensembles of deep learning models. This approach gives impressive results
 as it was shown in few modern papers. In our research we investigate an algorithm of sampling deep learning models using
 hypernetwork, which controls diversity of the models. This method allows us to sample deep learning models in one-shot,
-withiout any additional calculational losses, this independence means that algorithm is able to sample as many models
+without any additional calculations losses, this independence means that algorithm is able to sample as many models
 as we want. To evaluate the performance of the proposed algorithm, we conducted experiments on the Fashion-MNIST and CIFAR-10
 datasets and compare the resulting ensembles with ones sampled by other searching algorithms.
 
 \end{abstract}
 
 
-\keywords{ differential search \and neural emsembles \and hypernetwork \and diversity control }
+\keywords{ differential search \and neural ensembles \and hypernetwork \and diversity control }
 
 \section{Introduction}
 
-Nowadays algorithms of neural architecture search (NAS) are well-explored and prooved to be an effective way of creating
-more effective and efficient neural networks, \citep{darts, robustify, xnas}. Such algorithms use different ways to make problem diffirentiable so it can
+Nowadays algorithms of neural architecture search (NAS) are well-explored and proved to be an effective way of creating
+more effective and efficient neural networks, \citep{darts, robustify, xnas}. Such algorithms use different ways to make problem differentiable so it can
 be solved by wide range of methods for smooth optimization problems. On the other hand, neural ensemble search (NES) is
 modern and not as well investigated problem as NAS, although it is known that ensembles of deep learning models show better
 results in different applied problems.
 
 Our paper investigates an algorithm of sampling deep learning models in a new way. Despite the fact that similar algorithms
-were discribed and investigated, our scheme has uniqeue set of techniques that gives compatible results and has its own sphere
-of implimentations.
+were described and investigated, our scheme has unique set of techniques that gives compatible results and has its own sphere
+of implementations.
 
-First of all, we use DARTS \citep{darts} as our basic NAS algorithm. It is prooved to be an effective architecture search algorithm. Some
-modern investigations have shown that the algorithm can be upgrated \citep{p-darts, sdarts, darts-}, but the modernisations do not make tangible difference
+First of all, we use DARTS \citep{darts} as our basic NAS algorithm. It is proved to be an effective architecture search algorithm. Some
+modern investigations have shown that the algorithm can be upgraded \citep{p-darts, sdarts, darts-}, but the modernisation do not make tangible difference
 and are mainly made for some specific cases. So in our paper we are focusing on ensemble sampling, so slightly different base
 model does not change anything in resulting ensemble.
 
 Second of all, we use hypernetwork in our sampling algorithm. Hypernetwork is small network so it does not
 consume too much computational capacity \citep{hypernetworks}. This network contains information about another network, which is called target network.
 This approach is not new: hypernetworks and supernetworks were intended to control different characteristics such as
-complexity of acrhitecture \citep{darts-cc} or parameters of the target model \citep{cont-learn} in several modern investigations. In our algorithm it controls 
+complexity of architecture \citep{darts-cc} or parameters of the target model \citep{cont-learn} in several modern investigations. In our algorithm it controls 
 diversity of the target models, so every sampled model differs from previously sampled ones.
 
-The hypernetwork uses Jensen-Shennon divergence (JSd) to measure difference between two architectures which is simmetric and finite
-in contrast to more popular Kullback–Leibler divergence. Our main idea of sampling different model is to use a reguralizer,
+The hypernetwork uses Jensen-Shennon divergence (JSd) to measure difference between two architectures which is symmetric and finite
+in contrast to more popular Kullback–Leibler divergence. Our main idea of sampling different model is to use a regularizer,
 based on JSd as a source of diversity.
 
 This way we are able to sample deep learning models in one-shot, without and additional computational losses.
@@ -118,16 +121,26 @@ To sum up the scheme of our method:
 \end{enumerate}
 
 
-\section{Headings: first level}
+\section{Method}
 \label{sec:headings}
 
-\lipsum[4] See Section \ref{sec:headings}.
+See Section \ref{sec:headings}.
 
-\subsection{Headings: second level}
-\lipsum[5]
-\begin{equation}
-	\xi _{ij}(t)=P(x_{t}=i,x_{t+1}=j|y,v,w;\theta)= {\frac {\alpha _{i}(t)a^{w_t}_{ij}\beta _{j}(t+1)b^{v_{t+1}}_{j}(y_{t+1})}{\sum _{i=1}^{N} \sum _{j=1}^{N} \alpha _{i}(t)a^{w_t}_{ij}\beta _{j}(t+1)b^{v_{t+1}}_{j}(y_{t+1})}}
-\end{equation}
+\subsection{Problem statement}
+
+Contrary to the selection of one single architecture in conventional NAS algorithm, this paper focuses on the problem of selecting a well-performing neural network ensemble with diverse architectures from the NAS search space, i.e., neural ensemble search (NES). Let $f(w_\alpha, \alpha)$ denote the output of an architecture $\alpha$ and model parameter $w_\alpha$, $S$ be a set of architectures and $\mathcal{L}_{train}$ and $\mathcal{L}_{val}$ denote the training and validation losses, respectively. Given the ensemble scheme with an ensemble size of $|S|$, NES can be formally framed as
+
+\begin{gather*}
+	\min_S \mathcal{L}_{val}\left(\frac{1}{|S|}\sum_{\alpha \in S}f(w_\alpha^*, \alpha)\right) \\
+s.t. \text{ }\forall \alpha \in S \text{ } w_\alpha^* = \arg \min_w \mathcal{L}_{train}(f(w_\alpha^*, \alpha))
+\end{gather*}
+
+We slightly rearranged the problem: in our case $w^*$ is general for all architectures. Also architectures differ in terms of $\lambda$ so resulting functions can be calculated in terms of expected values.
+
+\begin{gather*}
+    \min_{\lambda \in \Lambda} \mathbb{E}_\lambda [\mathcal{L}_{val}(w^*, \alpha(\lambda))] \\
+    s.t. \text{ } w^* = \arg \min_w \mathbb{E}_\lambda[\mathcal{L}_{train}(w, \alpha(\lambda))]
+\end{gather*}
 
 \subsubsection{Headings: third level}
 \lipsum[6]
@@ -153,7 +166,6 @@ See Figure \ref{fig:fig1}. Here is how you add footnotes. \footnote{Sample of th
 
 \begin{figure}
 	\centering
-
 	\caption{Sample figure caption.}
 	\label{fig:fig1}
 \end{figure}
