@@ -72,7 +72,7 @@ if __name__ == "__main__":
             log_frequency=args.log_frequency,
             unrolled=args.unrolled,
             tau=0.95, # параметр сглаживания для подсчета дивергенции
-            decay=1 # вес регуляризации
+            decay=-1e10 # вес регуляризации
         )
         trainer.fit()
         final_architecture = trainer.export()

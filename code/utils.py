@@ -27,12 +27,19 @@ import torch.nn.functional as F
 import torch
 import json
 
-def JSD(t1, t2): # tensor, tensor -> float
-    m = 0.5 * (t1 + t2)
+
+def JSD(net_1_logits, net_2_logits):
+    from torch.functional import F
+    net_1_probs = F.softmax(net_1_logits, dim=0)
+    net_2_probs = F.softmax(net_2_logits, dim=0)
+    
+    total_m = 0.5 * (net_1_probs + net_2_probs)
+    
     loss = 0.0
-    loss += F.kl_div(t1, m, reduction="batchmean") 
-    loss += F.kl_div(t1, m, reduction="batchmean") 
+    loss += F.kl_div(F.log_softmax(net_1_logits, dim=0), total_m, reduction="batchmean") 
+    loss += F.kl_div(F.log_softmax(net_2_logits, dim=0), total_m, reduction="batchmean") 
     return (0.5 * loss)
+
 
 class MyDartsTrainer(DartsTrainer):
     def __init__(self, model, loss, metrics, optimizer,
@@ -72,11 +79,11 @@ class MyDartsTrainer(DartsTrainer):
         res = 0.0
         for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
             if name in self.optimal.keys():
-                res += JSD(F.softmax(module.alpha.data), self.optimal[name])
+                res += JSD(module.alpha.data, self.optimal[name])
         return res
 
     def _logits_and_loss(self, X, y):
         logits = self.model(X)
         loss = self.loss(logits, y) - self.decay * self.JSD() # обращаем внимание, что регуляризатор не влияет на первый уровень оптимизации
-        if loss < 0: loss = 0
+        if loss < 0: loss = 0.01
         return logits, loss
