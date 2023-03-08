@@ -77,13 +77,14 @@ class MyDartsTrainer(DartsTrainer):
 
     def JSD(self): # подсчет дивергенции между своей и оптимальной архитектурой
         res = 0.0
+        count = 0
         for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
             if name in self.optimal.keys():
-                res += JSD(module.alpha.data, self.optimal[name])
-        return res
+                res += JSD(module.alpha, torch.log(self.optimal[name]))
+                count += 1
+        return res / count
 
     def _logits_and_loss(self, X, y):
         logits = self.model(X)
         loss = self.loss(logits, y) - self.decay * self.JSD() # обращаем внимание, что регуляризатор не влияет на первый уровень оптимизации
-        if loss < 0: loss = 0.01
         return logits, loss
