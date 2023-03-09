@@ -62,7 +62,7 @@
 \hypersetup{
 pdftitle={Differentiable algorithm for searching ensembles of deep learning models with diversity control},
 pdfsubject={q-bio.NC, q-bio.QM},
-pdfauthor={K.Yakovlev, O.Bakhteev, K.Petrushina, P.Babkin},
+pdfauthor={P.Babkin, K.Petrushina, K.Yakovlev, O.Bakhteev},
 pdfkeywords={First keyword, Second keyword, More},
 }
 
@@ -71,13 +71,15 @@ pdfkeywords={First keyword, Second keyword, More},
 
 \begin{abstract}
 	
-This paper is developed to introduce a new method of creating ensembles of deep learning models. 
-Many modern researches were focused on creating effective and efficient algorithms of differentiable architecture search,
-missing opportunity to create ensembles of deep learning models. This approach gives impressive results
-as it was shown in few modern papers. In our research we investigate an algorithm of sampling deep learning models using
-hypernetwork, which controls diversity of the models. This method allows us to sample deep learning models in one-shot,
-without any additional calculations losses, this independence means that algorithm is able to sample as many models
-as we want. To evaluate the performance of the proposed algorithm, we conducted experiments on the Fashion-MNIST and CIFAR-10
+This paper proposes a new method of deep learning ensemble contsruction.
+%Many modern researches were focused on creating effective and efficient algorithms of differentiable architecture search,
+%missing opportunity to create ensembles of deep learning models. This approach gives impressive results
+%as it was shown in few modern papers.
+In our research we investigate an algorithm of sampling deep learning models using
+hypernetwork, which controls diversity of the models. This method allows us to sample deep learning models in one-shot regime,
+without any additional calculations losses.
+%, this independence means that algorithm is able to sample as many models as we want.
+To evaluate the performance of the proposed algorithm, we conduct experiments on the Fashion-MNIST and CIFAR-10
 datasets and compare the resulting ensembles with ones sampled by other searching algorithms.
 
 \end{abstract}
@@ -87,8 +89,8 @@ datasets and compare the resulting ensembles with ones sampled by other searchin
 
 \section{Introduction}
 
-Nowadays algorithms of neural architecture search (NAS) are well-explored and proved to be an effective way of creating
-more effective and efficient neural networks, \citep{darts, robustify, xnas}. Such algorithms use different ways to make problem differentiable so it can
+Nowadays methods of neural architecture search (NAS) are well-explored and proved to be an effective way of creating
+more effective and efficient neural networks \citep{darts, robustify, xnas}. Such algorithms use different ways to make problem differentiable so it can
 be solved by wide range of methods for smooth optimization problems. On the other hand, neural ensemble search (NES) is
 modern and not as well investigated problem as NAS, although it is known that ensembles of deep learning models show better
 results in different applied problems.
@@ -104,20 +106,20 @@ model does not change anything in resulting ensemble.
 
 Second of all, we use hypernetwork in our sampling algorithm. Hypernetwork is small network so it does not
 consume too much computational capacity \citep{hypernetworks}. This network contains information about another network, which is called target network.
-This approach is not new: hypernetworks and supernetworks were intended to control different characteristics such as
-complexity of architecture \citep{darts-cc} or parameters of the target model \citep{cont-learn} in several modern investigations. In our algorithm it controls 
-diversity of the target models, so every sampled model differs from previously sampled ones.
+Previously hypernetwoks were intended to control different characteristics such as
+complexity of architecture \citep{darts-cc} or parameters of the target model \citep{cont-learn} in several modern investigations. In our paper it controls 
+diversity of the target models, so every sampled model differs from previously sampled ones in terms of Jensen-Shennon divergence (JSd).
 
-The hypernetwork uses Jensen-Shennon divergence (JSd) to measure difference between two architectures which is symmetric and finite
+The hypernetwork uses JSd to measure difference between two architectures which is symmetric and finite
 in contrast to more popular Kullback–Leibler divergence. Our main idea of sampling different model is to use a regularizer,
 based on JSd as a source of diversity.
 
 This way we are able to sample deep learning models in one-shot, without and additional computational losses.
 To sum up the scheme of our method:
 \begin{enumerate} 
-    \item find a base architectire using DARTS
+    \item find a base architecture using DARTS
     \item sample architectures in one-shot via differentiable algorithm
-    \item inferencing answer is ensemble of the sampled deep learning models
+    \item inference answer is ensemble of the sampled deep learning models
 \end{enumerate}
 
 
@@ -128,25 +130,64 @@ See Section \ref{sec:headings}.
 
 \subsection{Problem statement}
 
-Contrary to the selection of one single architecture in conventional NAS algorithm, this paper focuses on the problem of selecting a well-performing neural network ensemble with diverse architectures from the NAS search space, i.e., neural ensemble search (NES). Let $f(w_\alpha, \alpha)$ denote the output of an architecture $\alpha$ and model parameter $w_\alpha$, $S$ be a set of architectures and $\mathcal{L}_{train}$ and $\mathcal{L}_{val}$ denote the training and validation losses, respectively. Given the ensemble scheme with an ensemble size of $|S|$, NES can be formally framed as
+Contrary to the selection of one single architecture in conventional NAS algorithm, this paper focuses on the problem of selecting a well-performing neural network ensemble with diverse architectures from the NAS search space, i.e., neural ensemble search (NES). We use following terms
+\begin{itemize}
+    \item $\alpha$ -- an architecture of a model, i.e. a set of operations between nodes
+    \item $f(w_\alpha, \alpha)$ -- the output of an architecture $\alpha$ and model parameter $w_\alpha$
+    \item $S$ -- a set of architectures included into ensemble
+    \item $\mathcal{L}_{train}$, $\mathcal{L}_{val}$ -- the training and validation losses, respectively. We imply their dependence on preset dataset and do not denote it explicitly, because we dont deal with it
+\end{itemize}
+
+Given the ensemble scheme, NES can be formally framed as
 
 \begin{gather*}
 	\min_S \mathcal{L}_{val}\left(\frac{1}{|S|}\sum_{\alpha \in S}f(w_\alpha^*, \alpha)\right) \\
 s.t. \text{ }\forall \alpha \in S \text{ } w_\alpha^* = \arg \min_w \mathcal{L}_{train}(f(w_\alpha^*, \alpha))
 \end{gather*}
 
-We slightly rearranged the problem: in our case $w^*$ is general for all architectures. Also architectures differ in terms of $\lambda$ so resulting functions can be calculated in terms of expected values.
+We rearranged the problem:  general for all architectures. Also architectures differ in terms of $\lambda$ so resulting functions can be calculated in terms of expected values.
 
 \begin{gather*}
-    \min_{\lambda \in \Lambda} \mathbb{E}_\lambda [\mathcal{L}_{val}(w^*, \alpha(\lambda))] \\
+    \min_{\alpha} \mathbb{E}_\lambda [\mathcal{L}_{val}(w^*, \alpha(\lambda)) - \lambda JS(\alpha^*, \alpha(\lambda))] \\
     s.t. \text{ } w^* = \arg \min_w \mathbb{E}_\lambda[\mathcal{L}_{train}(w, \alpha(\lambda))]
 \end{gather*}
 
-\subsubsection{Headings: third level}
-\lipsum[6]
+\subsection{Computational experiment}
 
-\paragraph{Paragraph}
-\lipsum[7]
+In our model $\lambda$ is a random value, distributed according to uniform distribution from 0 to $\Lambda$ ($\sim U(0, \Lambda)$). Main goal of basic experiment was to estimate $\Lambda$ and also to see correlation between resulting architecture and $\lambda$.
+
+\subsubsection{Experiment planning}
+
+In our experiment we chose fashionMNIST dataset, because it is not very easy so it makes difference between algorithms more sensible. In our basic experiment we run the algorithm for several different $\lambda$ and looked at resulting dataset and accuracy. Further we will use $\lambda$ distributed randomly, but in basic experiment it is fixed.
+
+\subsubsection{Preliminary report}
+
+Obtained results are depicted in the table below. max accuracy and amount of matching edges between resulting and optimal architecture are written down.
+
+This information allows us to choose $\Lambda = 32$. However amount of matching edges does not really coincide with our expectations. Architectures almost do not intersect. Such result can be explained by the fact that we used only one cell, so almost and architecture works well on it.
+
+\begin{table}[h   ]
+	\caption{preliminary results}
+	\centering
+	\begin{tabular}{lll}
+
+		\cmidrule(r){1-2}
+		$\lambda$     & accuracy, \% & matched edges \\
+		\midrule
+        0 (optimum) & 91.24 & - \\ 
+        1/2  & 91.24 &  4   \\
+		2  & 91.26   &  3   \\
+		32 & 89.21   &  2   \\
+		64 & 87.09   &  1   \\
+		\bottomrule
+	\end{tabular}
+	\label{tab:table}
+\end{table}
+
+
+
+
+
 
 
 
