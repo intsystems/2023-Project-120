@@ -27,7 +27,7 @@ if __name__ == "__main__":
     parser.add_argument("--decay", default=0.0, type=float, help='regularization coefficient')
     parser.add_argument("--unrolled", default=False, action="store_true")
     parser.add_argument("--visualization", default=False, action="store_true")
-    parser.add_argument("--save_path", default='finar_architecture.json', type=str)
+    parser.add_argument("--save-folder", default='checkpoints/0', type=str)
     args = parser.parse_args()
 
     dataset_train, dataset_valid = datasets.get_dataset(dataset)
@@ -58,4 +58,4 @@ if __name__ == "__main__":
     trainer.fit()
     final_architecture = trainer.export()
     print('Final architecture:', trainer.export())
-    json.dump(trainer.export(), open(args.save_path, 'w'))
+    json.dump(trainer.export(), open(args.save_folder + '/arc.json', 'w+'))

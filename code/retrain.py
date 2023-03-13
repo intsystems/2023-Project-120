@@ -114,12 +114,12 @@ if __name__ == "__main__":
     parser.add_argument("--drop-path-prob", default=0.1, type=float)
     parser.add_argument("--workers", default=4)
     parser.add_argument("--grad-clip", default=5., type=float)
-    parser.add_argument("--arc-checkpoint", default="./checkpoints/epoch_0.json")
+    parser.add_argument("--save-folder", default="./checkpoints/0")
 
     args = parser.parse_args()
     dataset_train, dataset_valid = datasets.get_dataset("fashionmnist", cutout_length=16)
 
-    with fixed_arch(args.arc_checkpoint):
+    with fixed_arch(args.save_folder + "/arc.json"):
         model = CNN(32, 1, 36, 10, args.layers, auxiliary=True)
     criterion = nn.CrossEntropyLoss()
 
@@ -155,4 +155,5 @@ if __name__ == "__main__":
 
         lr_scheduler.step()
 
+    torch.save(model.state_dict(), args.save_folder + "/mod.json")
     logger.info("Final best Prec@1 = {:.4%}".format(best_top1))

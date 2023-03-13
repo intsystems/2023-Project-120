@@ -60,7 +60,7 @@ class MyDartsTrainer(DartsTrainer):
         O = len(operations) # кол-во операций
 
         self.optimal = {} # выдает сглаженный тензор операций по названию операции
-        with open('checkpoint_optimum.json') as f:
+        with open('checkpoints/0/arc.json') as f:
             checkpoint_optimum = json.load(f) # оптимальная архитектура в виде словаря
 
         for name, _ in self.nas_modules:
