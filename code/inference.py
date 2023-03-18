@@ -48,7 +48,7 @@ if __name__ == "__main__":
         model.load_state_dict(torch.load(dir + "/mod.json"))
         
         models.append(model)
-    print(len(models))
+
     valid_loader = torch.utils.data.DataLoader(dataset_valid,
                                                 batch_size=args.batch_size,
                                                 shuffle=False,
@@ -61,17 +61,18 @@ if __name__ == "__main__":
     losses = AverageMeter("losses")
 
     # validation
+    softmax = nn.Softmax(dim=1)
     for step, (X, y) in enumerate(valid_loader):
             X, y = X.to(device, non_blocking=True), y.to(device, non_blocking=True)
             bs = X.size(0)
 
-            logits = models[0](X)
+            probabilities = softmax(models[0](X))
             for i in range(1, len(models)):
-                 logits += models[i](X)
-            logits = logits / len(models)
-            loss = criterion(logits, y)
+                 probabilities += softmax(models[i](X))
+            probabilities = probabilities / len(models)
+            loss = criterion(probabilities, y)
 
-            accuracy = utils.accuracy(logits, y, topk=(1, 5))
+            accuracy = utils.accuracy(probabilities, y, topk=(1, 5))
             losses.update(loss.item(), bs)
             top1.update(accuracy["acc1"], bs)
             top5.update(accuracy["acc5"], bs)
