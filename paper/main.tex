@@ -19,7 +19,7 @@
 \usepackage{doi}
 
 
-\title{Differentiable algorithm for searching ensembles of deep learning models with diversity control}
+\title{Differential neural ensemble search with diversity control}
 
 \author{K. Yakovlev, O.Bakhteev, K. Petrushina, P. Babkin
 	%% David S.~Hippocampus\thanks{Use footnote for providing further
@@ -71,14 +71,9 @@ pdfkeywords={First keyword, Second keyword, More},
 
 \begin{abstract}
 	
-This paper proposes a new method of deep learning ensemble contsruction.
-%Many modern researches were focused on creating effective and efficient algorithms of differentiable architecture search,
-%missing opportunity to create ensembles of deep learning models. This approach gives impressive results
-%as it was shown in few modern papers.
-In our research we investigate an algorithm of sampling deep learning models using
-hypernetwork, which controls diversity of the models. This method allows us to sample deep learning models in one-shot regime,
-without any additional calculations losses.
-%, this independence means that algorithm is able to sample as many models as we want.
+This paper introduces a new method of deep learning ensemble contsruction.
+In our research we investigate an algorithm of sampling the deep learning models using
+hypernetwork. Hypernetwork is a neural network which controls diversity of the models. It translates a real number into an architecture of a sampled neural network. This method samples deep learning models in one-shot regime, without any additional calculations losses.
 To evaluate the performance of the proposed algorithm, we conduct experiments on the Fashion-MNIST and CIFAR-10
 datasets and compare the resulting ensembles with ones sampled by other searching algorithms.
 
@@ -90,49 +85,40 @@ datasets and compare the resulting ensembles with ones sampled by other searchin
 \section{Introduction}
 
 Nowadays methods of neural architecture search (NAS) are well-explored and proved to be an effective way of creating
-more effective and efficient neural networks \citep{darts, robustify, xnas}. Such algorithms use different ways to make problem differentiable so it can
-be solved by wide range of methods for smooth optimization problems. On the other hand, neural ensemble search (NES) is
+more effective and efficient neural networks \citep{darts, robustify, xnas}. Some of these methods use different ways to smooth out the architecture so optimum for it can
+be found by wide range of methods for smooth optimization problems. On the other hand, neural ensemble search (NES) is
 modern and not as well investigated problem as NAS, although it is known that ensembles of deep learning models show better
-results in different applied problems.
-
-Our paper investigates an algorithm of sampling deep learning models in a new way. Despite the fact that similar algorithms
-were described and investigated, our scheme has unique set of techniques that gives compatible results and has its own sphere
+results in different applied problems \citep{multi-head}.
+Our paper investigates an method of sampling deep learning models in a new way that gives compatible results and has its own sphere
 of implementations.
 
-First of all, we use DARTS \citep{darts} as our basic NAS algorithm. It is proved to be an effective architecture search algorithm. Some
-modern investigations have shown that the algorithm can be upgraded \citep{p-darts, sdarts, darts-}, but the modernisation do not make tangible difference
-and are mainly made for some specific cases. So in our paper we are focusing on ensemble sampling, so slightly different base
-model does not change anything in resulting ensemble.
+Our method takes the result of NAS as a base architecture than it samples architectures which are close to the optimal one in terms of Jensen-Shennon divergence (JSd). Method can control whether sampled architectures are close enough to the optimal one so they give good results on the original dataset and are diverse enough so every architecture makes its own contribution to the final answer.
 
-Second of all, we use hypernetwork in our sampling algorithm. Hypernetwork is small network so it does not
-consume too much computational capacity \citep{hypernetworks}. This network contains information about another network, which is called target network.
+To sample architectures we use hypernetwork. This network generates parameters for another network, which is called target network.
 Previously hypernetwoks were intended to control different characteristics such as
 complexity of architecture \citep{darts-cc} or parameters of the target model \citep{cont-learn} in several modern investigations. In our paper it controls 
-diversity of the target models, so every sampled model differs from previously sampled ones in terms of Jensen-Shennon divergence (JSd).
+diversity of the target models, so every sampled model differs from previously sampled ones in terms of JSd.
 
 The hypernetwork uses JSd to measure difference between two architectures which is symmetric and finite
 in contrast to more popular Kullback–Leibler divergence. Our main idea of sampling different model is to use a regularizer,
 based on JSd as a source of diversity.
 
 This way we are able to sample deep learning models in one-shot, without and additional computational losses.
-To sum up the scheme of our method:
-\begin{enumerate} 
-    \item find a base architecture using DARTS
-    \item sample architectures in one-shot via differentiable algorithm
-    \item inference answer is ensemble of the sampled deep learning models
-\end{enumerate}
+To sum up the scheme of our method: find a base architecture using DARTS, sample architectures in one-shot via differentiable algorithm. Inference answer is ensemble of the sampled deep learning models.
 
+We conducted experiments on CIFAR and MNIST datasets to evaluate performance of the proposed method in terms of accuracy and time. Also we compare the performance with state-of-art NES and NAS algorithms \citep{darts, ???}.
 
 \section{Method}
-\label{sec:headings}
-
-See Section \ref{sec:headings}.
 
 \subsection{Problem statement}
 
 Contrary to the selection of one single architecture in conventional NAS algorithm, this paper focuses on the problem of selecting a well-performing neural network ensemble with diverse architectures from the NAS search space, i.e., neural ensemble search (NES). We use following terms
 \begin{itemize}
     \item $\alpha$ -- an architecture of a model, i.e. a set of operations between nodes
+    \item $\alpha^*$ -- a NAS resulting architecture, i.e. an optimal architecture
+    \item $w_\alpha^*$ -- optimal parameters for architecture $\alpha$
+    \item $\lambda$ -- a measure of diversity, a real number from $0$ to $\Lambda$
+    \item $\alpha(\lambda)$ -- an architecture that corresponds $\lambda$ 
     \item $f(w_\alpha, \alpha)$ -- the output of an architecture $\alpha$ and model parameter $w_\alpha$
     \item $S$ -- a set of architectures included into ensemble
     \item $\mathcal{L}_{train}$, $\mathcal{L}_{val}$ -- the training and validation losses, respectively. We imply their dependence on preset dataset and do not denote it explicitly, because we dont deal with it
@@ -154,24 +140,24 @@ We rearranged the problem:  general for all architectures. Also architectures di
 
 \subsection{Computational experiment}
 
-In our model $\lambda$ is a random value, distributed according to uniform distribution from 0 to $\Lambda$ ($\sim U(0, \Lambda)$). Main goal of basic experiment was to estimate $\Lambda$ and also to see correlation between resulting architecture and $\lambda$.
+In our model $\lambda$ is a random value, distributed according to uniform distribution from 0 to $\Lambda$ ($\sim U(0, \Lambda)$). Main goal of basic experiment was to estimate $\Lambda$ and also to investigate dependence of resulting architecture's performance on $\lambda$.
 
 \subsubsection{Experiment planning}
 
-In our experiment we chose fashionMNIST dataset, because it is not very easy so it makes difference between algorithms more sensible. In our basic experiment we run the algorithm for several different $\lambda$ and looked at resulting dataset and accuracy. Further we will use $\lambda$ distributed randomly, but in basic experiment it is fixed.
+In our basic experiment we run the algorithm on fashionMNIST dataset for several different $\lambda$ and looked at resulting architecture and accuracy. Further we will use $\lambda$ distributed randomly, but in basic experiment it is fixed.
 
 \subsubsection{Preliminary report}
 
-Obtained results are depicted in the table below. max accuracy and amount of matching edges between resulting and optimal architecture are written down.
+Obtained results are depicted in the table below. Maximal accuracy and amount of matching edges between resulting and optimal architecture are written down.
 
-This information allows us to choose $\Lambda = 32$. However amount of matching edges does not really coincide with our expectations. Architectures almost do not intersect. Such result can be explained by the fact that we used only one cell, so almost and architecture works well on it.
+This information allows us to choose $\Lambda = 32$. However amount of matching edges does not really coincide with our expectations. Architectures almost do not intersect. It can be explained by the fact that the optimized function is not convex, so algorithm fall into different minimums, however we can get more matching edges by using negative $\lambda$. 
 
 \begin{table}[h   ]
 	\caption{preliminary results}
 	\centering
 	\begin{tabular}{lll}
 
-		\cmidrule(r){1-2}
+		\midrule
 		$\lambda$     & accuracy, \% & matched edges \\
 		\midrule
         0 (optimum) & 91.24 & - \\ 
@@ -189,60 +175,6 @@ This information allows us to choose $\Lambda = 32$. However amount of matching 
 
 
 
-
-
-\section{Examples of citations, figures, tables, references}
-\label{sec:others}
-
-\subsection{Citations}
-Citations use \verb+natbib+. The documentation may be found at
-\begin{center}
-	\url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf}
-\end{center}
-
-\subsection{Figures}
-\lipsum[10]
-See Figure \ref{fig:fig1}. Here is how you add footnotes. \footnote{Sample of the first footnote.}
-\lipsum[11]
-
-\begin{figure}
-	\centering
-	\caption{Sample figure caption.}
-	\label{fig:fig1}
-\end{figure}
-
-\subsection{Tables}
-See awesome Table~\ref{tab:table}.
-
-The documentation for \verb+booktabs+ (`Publication quality tables in LaTeX') is available from:
-\begin{center}
-	\url{https://www.ctan.org/pkg/booktabs}
-\end{center}
-
-
-\begin{table}
-	\caption{Sample table title}
-	\centering
-	\begin{tabular}{lll}
-		\toprule
-		\multicolumn{2}{c}{Part}                   \\
-		\cmidrule(r){1-2}
-		Name     & Description     & Size ($\mu$m) \\
-		\midrule
-		Dendrite & Input terminal  & $\sim$100     \\
-		Axon     & Output terminal & $\sim$10      \\
-		Soma     & Cell body       & up to $10^6$  \\
-		\bottomrule
-	\end{tabular}
-	\label{tab:table}
-\end{table}
-
-\subsection{Lists}
-\begin{itemize}
-	\item Lorem ipsum dolor sit amet
-	\item consectetur adipiscing elit.
-	\item Aliquam dignissim blandit est, in dictum tortor gravida eget. In ac rutrum magna.
-\end{itemize}
 
 \bibliography{references}
 
