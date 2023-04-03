@@ -3,7 +3,6 @@
 
 import json
 import logging
-import time
 from argparse import ArgumentParser
 
 import torch
@@ -11,8 +10,7 @@ import torch.nn as nn
 
 import datasets
 from model import CNN
-from utils import accuracy, MyDartsTrainer
-
+from utils import accuracy, MyDartsTrainer, BayesianSearchMC
 
 logger = logging.getLogger('nni')
 dataset = "fashionmnist"
@@ -28,6 +26,9 @@ if __name__ == "__main__":
     parser.add_argument("--unrolled", default=False, action="store_true")
     parser.add_argument("--visualization", default=False, action="store_true")
     parser.add_argument("--save-folder", default='checkpoints/0', type=str)
+    parser.add_argument("--tau", default=0.95, type=float, help="probability smoothing parameter")
+    parser.add_argument("--seed", default=0, type=int, help="random seed for bayesian sampling")
+    parser.add_argument("--mode", default="ours", help="random seed for bayesian sampling")
     args = parser.parse_args()
 
     dataset_train, dataset_valid = datasets.get_dataset(dataset)
@@ -42,19 +43,28 @@ if __name__ == "__main__":
     optim = torch.optim.SGD(model.parameters(), 0.025, momentum=0.9, weight_decay=3.0E-4)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim, args.epochs, eta_min=0.001)
 
-    trainer = MyDartsTrainer( # MyDartsTrainer
-        model=model,
-        loss=criterion, # =mycriterion,
-        metrics=lambda output, target: accuracy(output, target, topk=(1,)),
-        optimizer=optim,
-        num_epochs=args.epochs,
-        dataset=dataset_train,
-        batch_size=args.batch_size,
-        log_frequency=args.log_frequency,
-        unrolled=args.unrolled,
-        tau=0.95, # параметр сглаживания для подсчета дивергенции
-        decay=args.decay # вес регуляризации
-    )
+    kwargs = {
+        "model": model,
+        "loss": criterion, # =mycriterion,
+        "metrics": lambda output, target: accuracy(output, target, topk=(1,)),
+        "optimizer": optim,
+        "num_epochs": args.epochs,
+        "dataset": dataset_train,
+        "batch_size": args.batch_size,
+        "log_frequency": args.log_frequency,
+        "unrolled": args.unrolled,
+        "tau": args.tau,
+    }
+
+    if args.mode == "ours":
+        kwargs["decay"] = args.decay
+        trainer = MyDartsTrainer(**kwargs)
+    elif args.mode == "mc":
+        kwargs["seed"] = args.seed
+        trainer = BayesianSearchMC(**kwargs)
+    else:
+        raise NotImplementedError("Unsupported mode")
+
     trainer.fit()
     final_architecture = trainer.export()
     print('Final architecture:', trainer.export())
