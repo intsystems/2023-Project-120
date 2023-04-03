@@ -128,7 +128,7 @@ class BayesianSearchMC(DartsTrainer):
         for name, module in self.nas_modules:
             if name not in result:
                 if isinstance(module, DartsLayerChoice):
-                    idx = np.random.choice(self.O, p=np.array(self.optimal[name]))
+                    idx = np.random.choice(self.O, p=np.array(self.optimal[name].cpu()))
                     result[name] = list(module.op_choices.keys())[idx]
                 else:
                     result[name] = module.export()
