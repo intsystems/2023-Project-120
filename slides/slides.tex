@@ -14,16 +14,16 @@
 \usepackage{hyperref}% urls
 \usepackage{hhline}%tables
 % Your figures are here:
-\graphicspath{ {fig/} {../fig/} }
+\graphicspath{{./fig}}
 
 %----------------------------------------------------------------------------------------------------------
-\title[\hbox to 56mm{Feature generation}]{Feature generation for classification and forecasting problems}
+\title[\hbox to 56mm{Feature generation}]{Differential neural ensemble search with diversity control}
 \author[P.\,K.~Babkin]{Petr Babkin}
 \institute{Moscow Institute of Physics and Technology}
 \date{\footnotesize
-\par\smallskip\emph{Course:} My first scientific paper\par (Strijov's practice)/Group 874 %821, 813
-\par\smallskip\emph{Expert:} I.\,F.~Anny
-\par\smallskip\emph{Consultant:} I.\,O.~Gordeos
+\par\smallskip\emph{Course:} My first scientific paper\par (Strijov's practice)/Group B05-003
+\par\smallskip\emph{Expert:} O.~Bakhteev
+\par\smallskip\emph{Consultants:} K.~Yakovlev, K.~Petrushina
 \par\bigskip\small 2023}
 
 %----------------------------------------------------------------------------------------------------------
@@ -40,27 +40,26 @@
 %-----------------------------------------------------------------------------------------------------
 \begin{frame}{Problem of creating NN ensembles}
 
-\begin{columns}[c]
-\column{0.4\textwidth}
-\includegraphics[width=1.0\textwidth]{ErrorFunction}
-Method:
-    \begin{enumerate}
-        \item find optimal architecture
-        \item sample architectures with diversity control
-        \item give answer as equal voting
-    \end{enumerate}
-\column{0.6\textwidth}
-    \begin{figure}
-        \includegraphics[scale=0.21]{scheme}
-    \end{figure}
-\end{columns}
+    \begin{columns}[c]
+    \column{0.4\textwidth}
+    Method:
+        \begin{enumerate}
+            \item find optimal architecture
+            \item sample architectures with diversity control
+            \item give answer as equal voting
+        \end{enumerate}
+    \column{0.6\textwidth}
+        \begin{figure}
+            \includegraphics[scale=0.21]{scheme}
+        \end{figure}
+    \end{columns}
 
-\bigskip
-Problem of sampling new models for ensemble: 
-\begin{gather*}
-    \min_{\alpha} \mathbb{E}_{\lambda \sim U(0, \Lambda)} [\mathcal{L}_{val}(w^*, \alpha(\lambda)) - \lambda JS(\alpha^*, \alpha(\lambda))] \\
-    s.t. \text{ } w^* = \arg \min_w \mathbb{E}_{\lambda \sim U(0, \Lambda)}[\mathcal{L}_{train}(w, \alpha(\lambda))]
-\end{gather*}
+    \bigskip
+    Problem of sampling new models for ensemble: 
+    \begin{gather*}
+        \min_{\alpha} \mathbb{E}_{\lambda \sim U(0, \Lambda)} [\mathcal{L}_{val}(w^*, \alpha(\lambda)) - \lambda JS(\alpha^*, \alpha(\lambda))] \\
+        s.t. \text{ } w^* = \arg \min_w \mathbb{E}_{\lambda \sim U(0, \Lambda)}[\mathcal{L}_{train}(w, \alpha(\lambda))]
+    \end{gather*}
 
 \end{frame}
 
