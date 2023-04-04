@@ -132,3 +132,4 @@ paper/main.blg
 paper/main.bbl
 code/data
 code/runs
+code/*.sh

@@ -118,42 +118,49 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     dataset_train, dataset_valid = datasets.get_dataset("fashionmnist", cutout_length=16)
+    
+    best_top1s = []
+    for decay in [29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]:
+        print(f"checkpoints/{decay}")
+        with fixed_arch(f"checkpoints/{decay}" + "/arc.json"):
+        # with fixed_arch(args.save_folder + "/arc.json"):
+            model = CNN(32, 1, 36, 10, args.layers, auxiliary=True)
+        criterion = nn.CrossEntropyLoss()
 
-    with fixed_arch(args.save_folder + "/arc.json"):
-        model = CNN(32, 1, 36, 10, args.layers, auxiliary=True)
-    criterion = nn.CrossEntropyLoss()
+        model.to(device)
+        criterion.to(device)
 
-    model.to(device)
-    criterion.to(device)
+        optimizer = torch.optim.SGD(model.parameters(), 0.025, momentum=0.9, weight_decay=3.0E-4)
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=1E-6)
 
-    optimizer = torch.optim.SGD(model.parameters(), 0.025, momentum=0.9, weight_decay=3.0E-4)
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=1E-6)
+        train_loader = torch.utils.data.DataLoader(dataset_train,
+                                                batch_size=args.batch_size,
+                                                shuffle=True,
+                                                num_workers=args.workers,
+                                                pin_memory=True)
+        valid_loader = torch.utils.data.DataLoader(dataset_valid,
+                                                batch_size=args.batch_size,
+                                                shuffle=False,
+                                                num_workers=args.workers,
+                                                pin_memory=True)
 
-    train_loader = torch.utils.data.DataLoader(dataset_train,
-                                               batch_size=args.batch_size,
-                                               shuffle=True,
-                                               num_workers=args.workers,
-                                               pin_memory=True)
-    valid_loader = torch.utils.data.DataLoader(dataset_valid,
-                                               batch_size=args.batch_size,
-                                               shuffle=False,
-                                               num_workers=args.workers,
-                                               pin_memory=True)
+        best_top1 = 0.
+        for epoch in range(args.epochs):
+            drop_prob = args.drop_path_prob * epoch / args.epochs
+            model.drop_path_prob(drop_prob)
 
-    best_top1 = 0.
-    for epoch in range(args.epochs):
-        drop_prob = args.drop_path_prob * epoch / args.epochs
-        model.drop_path_prob(drop_prob)
+            # training
+            train(args, train_loader, model, optimizer, criterion, epoch)
 
-        # training
-        train(args, train_loader, model, optimizer, criterion, epoch)
+            # validation
+            cur_step = (epoch + 1) * len(train_loader)
+            top1 = validate(args, valid_loader, model, criterion, epoch, cur_step)
+            best_top1 = max(best_top1, top1)
 
-        # validation
-        cur_step = (epoch + 1) * len(train_loader)
-        top1 = validate(args, valid_loader, model, criterion, epoch, cur_step)
-        best_top1 = max(best_top1, top1)
+            lr_scheduler.step()
 
-        lr_scheduler.step()
-
-    torch.save(model.state_dict(), args.save_folder + "/mod.json")
-    logger.info("Final best Prec@1 = {:.4%}".format(best_top1))
+        torch.save(model.state_dict(), f"checkpoints/{decay}" + "/mod.json")
+        # torch.save(model.state_dict(), args.save_folder + "/mod.json")
+        logger.info("Final best Prec@1 = {:.4%}".format(best_top1))
+        best_top1s.append(best_top1)
+        print(best_top1s)

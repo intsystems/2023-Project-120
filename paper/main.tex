@@ -23,7 +23,7 @@
 
 \title{Differential neural ensemble search with diversity control}
 
-\author{K. Yakovlev, O.Bakhteev, K. Petrushina, P. Babkin
+\author{P. Babkin, K. Yakovlev, K. Petrushina, O.Bakhteev,
 	%% David S.~Hippocampus\thanks{Use footnote for providing further
 	%%	information about author (webpage, alternative
 	%%	address)---\emph{not} for acknowledging funding agencies.} \\
@@ -73,10 +73,7 @@ pdfkeywords={First keyword, Second keyword, More},
 
 \begin{abstract}
 	
-In our research we investigate a new method of sampling the deep learning models using
-hypernetwork. A hypernetwork is a neural network which controls diversity of the models. It translates a real number into an architecture of a sampled neural network. This method samples deep learning models in one-shot regime, without any additional calculations losses.
-To evaluate the performance of the proposed algorithm, we conduct experiments on the Fashion-MNIST and CIFAR-10
-datasets and compare the resulting ensembles with ones sampled by other searching algorithms.
+In our research, we investigate a novel method for sampling deep learning models using a hypernetwork. The hypernetwork is a neural network that controls the diversity of the models by translating a real number representing ensemble diversity into a sampled neural network architecture. Architectures are obtained in a one-shot manner by perturbing from the base architecture in terms of the Jenson-Shannon divergence (JSd). We evaluate the performance of the proposed algorithm by conducting experiments on the Fashion-MNIST and CIFAR-10 datasets, comparing the resulting ensembles with those sampled by other searching algorithms.
 
 \end{abstract}
 
@@ -100,7 +97,8 @@ Method can control whether sampled architectures are close enough to the optimal
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.6\textwidth]{fig1}
-    \caption{\label{fig:arch}Architecture space}
+    \caption{\label{fig:arch}Architecture space with JSd metrics.
+    Blue ellipses are equidistant surfaces. The space is continuous but has varying preferred operations across different architectural levels. Architectures with different operations are pictured separately on the picture.}
 \end{figure}
 
 To sample architectures we use hypernetwork \citep{hypernetworks}. This network generates parameters for another network, which is called target network.
@@ -112,15 +110,25 @@ The hypernetwork uses JSd to measure difference between two architectures which 
 in contrast to more popular Kullback–Leibler divergence. Our main idea of sampling different model is to use a regularizer,
 based on JSd as a source of diversity.
 
-This way we are able to sample deep learning models in one-shot, without and additional computational losses.
+This way we sample deep learning models in one-shot unlike NES
+for Uncertainty Estimation \citep{nes}, where every sampled models must be tested and least appropriate architectures are excluded from ensemble.
+In this way our method is similar to NES via Bayesian Sampling \citep{baysiannes}, but we sample architectures using different approach, posterior distribution for architectures is gained based on the optimal one.
 To sum up the scheme of our method: find a base architecture using DARTS, sample architectures in one-shot via differentiable algorithm. Inference answer is ensemble of the sampled deep learning models.
 
-We conduct experiments on CIFAR and MNIST datasets to evaluate performance of the proposed method in terms of accuracy and time. Also we compare the performance with state-of-art NES and NAS algorithms \citep{darts, ???}.
+We conduct experiments on CIFAR and MNIST datasets to evaluate performance of the proposed method in terms of accuracy and time. Also we compare the performance with state-of-art NES algorithms \citep{nes, baysiannes}.
 
 \section{Problem statement}
 
-Contrary to the selection of one single architecture in conventional NAS algorithm, this paper focuses on the problem of selecting a well-performing neural network ensemble with diverse architectures from the NAS search space, i.e., neural ensemble search (NES). In our formal statements
-\mbox{\boldmath{$\alpha$}} denotes an architecture of a model, i.e. a set of operations between nodes. \mbox{\boldmath{$\alpha^*$}} is a NAS resulting architecture, i.e. an optimal architecture. \mbox{\boldmath{$w_\alpha^*$}} is vector of optimal parameters for architecture \mbox{\boldmath{$\alpha^*$}}. $\lambda$ is a measure of diversity, a real number from $0$ to $\Lambda$. \mbox{\boldmath{$\alpha$}}$(\lambda)$ is an architecture that corresponds $\lambda$, the architecture is gained after solving problem below. $f(\mbox{\boldmath{$w_\alpha$}}, \mbox{\boldmath{$\alpha$}})$ is an output of an architecture \mbox{\boldmath{$\alpha$}} and model parameter \mbox{\boldmath{$w_\alpha$}}. $S$ -- a set of architectures included into ensemble. $\mathcal{L}_{train}$, $\mathcal{L}_{val}$ are training and validation losses, respectively. We imply their dependence on preset dataset and do not denote it explicitly, because we do not deal with it.
+In our paper, we address the problem of classification. We assume that the dataset $\mathcal{D} = (\mathbf{X}, \mathbf{y})$ is given, where $\mathbf{X}$ represents the feature matrix and $\mathbf{y})$ represents the target vector. The dataset is divided into training and validation subsets, for which the loss functions $\mathcal{L}_{train}$ and $\mathcal{L}_{val}$ are specified, respectively. In general, these functions depend on the feature matrix, target vector, and the predicted outputs of the training model. However, in our paper, we will not explicitly state their dependence on the dataset, assuming it implicitly. Therefore, we will state that the loss functions depend only on the predicted outputs of the model.
+
+Contrary to the selection of one single architecture in conventional NAS algorithm \citep{darts, enas, nas}, this paper focuses on the problem of selecting a well-performing neural network ensemble with diverse architectures from the NAS search space, i.e., neural ensemble search (NES).
+
+In order to facilitate our study, several key terms are defined. The architecture of a model, i.e. a set of node operations, is denoted by \mbox{\boldmath{$\alpha$}}. For a fixed architecture, optimal parameters are denoted by \mbox{\boldmath{$w_\alpha^*$}}.
+The optimal architecture resulting from neural architecture search (NAS) is denoted as \mbox{\boldmath{$\alpha^*$}}. 
+To quantify architectural diversity, we define $\lambda$, a real number ranging from 0 to $\Lambda$.
+The corresponding architecture for a given $\lambda$ is denoted by \mbox{\boldmath{$\alpha$}}($\lambda$), which can be obtained by solving a specific problem.
+The output of an architecture \mbox{\boldmath{$\alpha$}}, given its corresponding model parameters \mbox{\boldmath{$w_\alpha$}}, is denoted by $f$(\mbox{\boldmath{$w_\alpha$}}, \mbox{\boldmath{$\alpha$}}).
+Finally, the set of architectures included in the ensemble is denoted by $\mathcal{S}$.
 
 Given the ensemble scheme, NES can be formally framed as
 
@@ -129,24 +137,71 @@ Given the ensemble scheme, NES can be formally framed as
 s.t. \text{ }\forall \mbox{\boldmath{$\alpha$}} \in S \text{ } \mbox{\boldmath{$w_\alpha^*$}} = \arg \min_{\mbox{\boldmath{$w$}}} \mathcal{L}_{train}(f(\mbox{\boldmath{$w_\alpha^*$}}, \mbox{\boldmath{$\alpha$}}))
 \end{gather*}
 
-We rearrange the problem:  general for all architectures. Also architectures differ in terms of $\lambda$ so resulting functions can be calculated in terms of expected values.
+\section{Method}
+
+Below we briefly described our method for solving problem of classification with dataset $\mathcal{D} = (\mathbf{X}, \mathbf{y})$. For each object $\mathbf{x} \in \mathbf{X}$ there is a label $y \in \mathbf{y}$. We solve the problem via NES, sampling architectures according to novel methodology which is formally described below.
+
+\subsection{Architecture}
+
+Let $\mathcal{V} = \{ 1, \ldots, N \}$ be a set of vertices, where N is a number of vertices, and $\mathcal{E} = \{ (i, j) \in V \times V \mid i < j \}$ a set of edges between them. A set of possible operations
+$\mathcal{O}$ usually contains pooling, convolutions, etc.
+For each edge there is an operation $o \in \mathcal{O}$ that transits information from one node to another.
+
+NAS algorithms search for optimal architecture. 
+As it was mentioned below, architecture of neural network is a set of operations between nodes. In NAS methods architecture is a vector constructed by following rules. For each edge $(i, j) \in \mathcal{E}$, \mbox{\boldmath{$\alpha^{(i, j)}$}} is a vector, which assigns impact of each operation.
+\mbox{\boldmath{$\alpha$}} is a concatenation of all structural parameters vectors \mbox{\boldmath{$\alpha^{(i, j)}$}}.
+
+\subsection{Reguralizer and heuristic}
+
+Source of diversity in out method is a regularizer with diversity parameter $\lambda$. By subtracting it from a loss function we promote method for finding an architecture which differs from the optimal one.
+
+We use Jensen-Shannon divergence to measure diversity of two architectures. NES algorithms give discrete architecture as a result of their work, i.e. initially optimal architecture \mbox{\boldmath{$\alpha_{init}^*$}} is discrete, so JSd cannot be calculated with \mbox{\boldmath{$\alpha_{init}^*$}} as an argument. We smooth the architecture using smooth parameter $\tau$ to solve this problem. 
+$$
+\mbox{\boldmath{$\alpha^*$}} = (1 - \tau)\mbox{\boldmath{$\alpha_{init}^*$}} + \tau \frac{1}{|\mathcal{O}|}
+$$
+
+Assuming $\tau$ close to one we obtain a smoothed architecture that contains the same information about architecture as a initial one, but we also can use it in JSd.
+
+\subsection{Diversity control via hypernetwork}
+
+In order to control diversity we employ the concept of hypernetwork. A hypernetwork is a parametric mapping from $[0, \Lambda]$ to the set of model structural parameters \citep{darts-cc}.
+$$
+\mbox{\boldmath{$\alpha$}} : [0, \Lambda], \mathbb{R}^u \to \mathbb{R}^s
+$$
+Where $\mathbb{R}^u$ is a hypernetwork parametric space and $\mathbb{R}^s$ is space of model structural parameters. In this terms \mbox{\boldmath{$\alpha$}} can be redefined using hypernetwork
+
+$$
+\mbox{\boldmath{$\alpha$}} = \mbox{\boldmath{$\alpha$}}(\lambda, \mbox{\boldmath{$a$}}) \text{ or } \mbox{\boldmath{$\alpha^{(i, j)}$}} = \mbox{\boldmath{$\alpha^{(i, j)}$}}(\lambda, \mbox{\boldmath{$a^{(i, j)}$}})
+$$
+In this paper each function $\mbox{\boldmath{$\alpha^{(i, j)}$}}$ is a piecewise linear function
+$$
+\mbox{\boldmath{$\alpha^{(i, j)}$}}(\lambda, \mbox{\boldmath{$a^{(i, j)}$}}) = \sum_{k=0}^{N-1} \left( \frac{\lambda - r_k}{r_{k + 1} - r_k} \mbox{\boldmath{$a_k^{(i, j)}$}} + \left(1 - \frac{\lambda - r_k}{r_{k + 1} - r_k}\right) \mbox{\boldmath{$a_{k + 1}^{(i, j)}$}} \right) I[\lambda \in [r_k, r_{k+1}]]
+$$
+
+In our method $\lambda$ is sampled from predefined distribution $p(\lambda) = U(0, \lambda)$ and new architecture is obtained from hypernetwork.
+
+\subsection{Final statement}
+
+Upon concluding the method description, a reformulated problem can be postulated: specifically, architectures are obtained via hypernetwork, and the regularizer is subtracted from the loss function. A varied parameter $\lambda$, ranging from 0 to $\Lambda$, is distributed according to a uniform distribution.
 
 \begin{gather*}
-    \min_{\mbox{\boldmath{$\alpha$}}} \mathbb{E}_\lambda [\mathcal{L}_{val}(\mbox{\boldmath{$w^*$}}, \mbox{\boldmath{$\alpha$}}(\lambda)) - \lambda JS(\mbox{\boldmath{$\alpha^*$}}, \mbox{\boldmath{$\alpha$}}(\lambda))] \\
-    s.t. \text{ } \mbox{\boldmath{$w^*$}} = \arg \min_{\mbox{\boldmath{$w$}}} \mathbb{E}_\lambda[\mathcal{L}_{train}(\mbox{\boldmath{$w$}}, \mbox{\boldmath{$\alpha$}}(\lambda))]
+    \min_{\mbox{\boldmath{$\alpha$}}} \mathbb{E}_{\lambda \sim U(0, \Lambda)} [\mathcal{L}_{val}(\mbox{\boldmath{$w^*$}}, \mbox{\boldmath{$\alpha$}}(\lambda)) - \lambda JS(\mbox{\boldmath{$\alpha^*$}}, \mbox{\boldmath{$\alpha$}}(\lambda))] \\
+    s.t. \text{ } \mbox{\boldmath{$w^*$}} = \arg \min_{\mbox{\boldmath{$w$}}} \mathbb{E}_{\lambda \sim U(0, \Lambda)}[\mathcal{L}_{train}(\mbox{\boldmath{$w$}}, \mbox{\boldmath{$\alpha$}}(\lambda))]
 \end{gather*}
 
-\subsection{Computational experiment}
+Following problem resolution, a new architecture is acquired and subsequently included into the ensemble. It is assured that said architecture is diverse enough from its counterparts and performs an acceptable level of accuracy.
 
-In our model $\lambda$ is a random value, distributed according to uniform distribution from 0 to $\Lambda$ ($\sim U(0, \Lambda)$). Main goal of basic experiment is to estimate $\Lambda$ and also to investigate dependence of resulting architecture's performance on $\lambda$.
+\section{Computational experiment}
 
-\subsubsection{Experiment planning}
+Main goal of basic experiment is to investigate dependence of resulting architecture's performance on $\lambda$ and also to estimate suitable $\Lambda$.
 
-In our basic experiment we run the algorithm on fashionMNIST dataset for several different $\lambda$ and looked at resulting architecture and accuracy. Further we will use $\lambda$ distributed randomly, but in basic experiment it is fixed.
+We conducted experiments on fashionMNIST dataset for $\lambda = 1, \ldots, 40$ and looked at resulting architecture and accuracy. Then we searched for appropriate $\Lambda$ by the following algorithm: we chose three random values of $\lambda$ from 0 to $\Lambda$, ensembled corresponding architectures and looked and ensemble performance in terms of accuracy on the dataset.
 
-\subsubsection{Preliminary report}
+\subsection{Preliminary report}
 
-Obtained results are depicted in the table below. Maximal accuracy of sampled architectures is written down. Also we recorded amount of matched operations between nodes i.e. number of edges between particular nodes that contain the same operation in obtained architecture and the basic one.
+Obtained results of architectures investigation are depicted in the table below \hyperref[tab:prelim]{Tab. 1}. Maximal accuracy of sampled architectures is written down. Also we recorded amount of matched operations between nodes i.e. number of edges between particular nodes that contain the same operation in obtained architecture and the basic one. Graphical visualization can be found in \hyperref[fig:graph]{Fig. 2}.
+
+Although the graphic is unstable, deterioration of accuracy with growth of architecture diversity parameter $\lambda$ can be clearly seen.
 
 This results allow us to choose $\Lambda = 32$. However amount of matching edges does not really coincide with our expectations. Architectures almost do not intersect. It can be explained by the fact that the optimized function is not convex, so algorithm fall into different minimums, however we can get more matching edges by using negative $\lambda$. 
 
@@ -165,54 +220,13 @@ This results allow us to choose $\Lambda = 32$. However amount of matching edges
 		64 & 87.09   &  1   \\
 		\bottomrule
 	\end{tabular}
-	\label{tab:table}
+	\label{tab:prelim}
 \end{table}
 
-\section{Method}
 
-Below we briefly described our method for solving problem of classification with dataset $\mathcal{D} = (\mathbf{X}, \mathbf{y})$. For each object $\mathbf{x} \in \mathbf{X}$ there is a label $y \in \mathbf{y}$. We solve the problem via NES, sampling architectures according to novel methodology which is formally described below.
+\section{Conclusion}
 
-\subsection{architecture}
-
-Let $\mathcal{V} = \{ 1, \ldots, N \}$ be a set of vertices, where N is a number of vertices, and $\mathcal{E} = \{ (i, j) \in V \times V \mid i < j \}$ a set of edges between them.
-$\mathcal{O}$ is a set of operations to choose from. Usually it contains pooling, convolutions, etc.
-For each edge there is an operation $o \in \mathcal{O}$ that transits information from one node to another.
-
-NAS algorithms search for optimal architecture. 
-As it was mentioned below, architecture of neural network is a set of operations between nodes. In NAS methods architecture is a vector constructed by following rules. For each edge $(i, j) \in \mathcal{E}$, \mbox{\boldmath{$\alpha^{(i, j)}$}} is a vector, which assigns impact of each operation.
-\mbox{\boldmath{$\alpha$}} is a concatenation of all structural parameters vectors \mbox{\boldmath{$\alpha^{(i, j)}$}}.
-
-\subsection{reguralizer}
-
-Source of diversity in out method is a regularizer with diversity parameter $\lambda$. By subtracting it from a loss function we promote method for finding an architecture which differs from the optimal one.
-
-We use Jensen-Shannon divergence to measure diversity of two architectures. NES algorithms give discrete architecture as a result of their work, i.e. initially optimal architecture \mbox{\boldmath{$\alpha_{init}^*$}} is discrete, so JSd cannot be calculated with \mbox{\boldmath{$\alpha_{init}^*$}} as an argument. We smooth the architecture using smooth parameter $\tau$ to solve this problem. 
-$$
-\mbox{\boldmath{$\alpha^*$}} = (1 - \tau)\mbox{\boldmath{$\alpha_{init}^*$}} + \tau \frac{1}{|\mathcal{O}|}
-$$
-
-Assuming $\tau$ close to one we obtain a smoothed architecture that contains the same information about architecture as a initial one, but we also can use it in JSd.
-
-\subsection{diversity control}
-
-In order to control diversity we employ the concept of hypernetwork. A hypernetwork is a parametric mapping from $[0, \Lambda]$ to the set of model structural parameters \citep{darts-cc}.
-$$
-\mbox{\boldmath{$\alpha$}} : [0, \Lambda], \mathbb{R}^u \to \mathbb{R}^s
-$$
-Where $\mathbb{R}^u$ is a hypernetwork parametric space and $\mathbb{R}^s$ is space of model structural parameters. In this terms \mbox{\boldmath{$\alpha$}} can be redefined using hypernetwork
-
-$$
-\mbox{\boldmath{$\alpha$}} = \mbox{\boldmath{$\alpha$}}(\lambda, \mbox{\boldmath{$a$}}) \text{ or } \mbox{\boldmath{$\alpha^{(i, j)}$}} = \mbox{\boldmath{$\alpha^{(i, j)}$}}(\lambda, \mbox{\boldmath{$a^{(i, j)}$}})
-$$
-In this paper each function $\mbox{\boldmath{$\alpha^{(i, j)}$}}$ is a piecewise linear function
-$$
-\mbox{\boldmath{$\alpha^{(i, j)}$}}(\lambda, \mbox{\boldmath{$a^{(i, j)}$}}) = \sum_{k=0}^{N-1} \left( \frac{\lambda - r_k}{r_{k + 1} - r_k} \mbox{\boldmath{$a_k^{(i, j)}$}} + \left(1 - \frac{\lambda - r_k}{r_{k + 1} - r_k}\right) \mbox{\boldmath{$a_{k + 1}^{(i, j)}$}} \right) I[\lambda \in [r_k, r_{k+1}]]
-$$
-
-In our method $\lambda$ is sampled from predefined distribution $p(\lambda) = U(0, \lambda)$ and new architecture is obtained from hypernetwork.
-
-
-
+In this paper, we proposed a novel method for sampling ensembles of deep learning models with diversity control. Our method utilizes a hypernetwork to generate diverse architectures by perturbing a base architecture in terms of Jensen-Shannon divergence. The diversity of the ensemble is controlled by a penalty term added to the loss function, which encourages the ensemble members to be diverse. We conducted experiments on the Fashion-MNIST dataset and demonstrated that our method performs compatible results in terms of accuracy and architectural diversity. Overall, our proposed method shows potential for practical applications in deep learning ensembling.
 
 \bibliography{references}
 
