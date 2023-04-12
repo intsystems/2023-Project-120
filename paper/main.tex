@@ -20,6 +20,11 @@
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{doi}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amssymb}
+
+\usepackage{doi}
 
 
 \title{Differential neural ensemble search with diversity control}
@@ -99,9 +104,7 @@ Method can control whether sampled architectures are close enough to the optimal
     \centering
     \includegraphics[width=0.6\textwidth]{fig1}
     \caption{\label{fig:arch}Architecture space with JSd metrics.
-    Blue ellipses are equidistant surfaces.
-	The space is continuous but has varying preferred operations across different architectural levels.
-	Architectures with different operations are pictured separately on the picture.}
+    Blue ellipses are equidistant surfaces. The space is continuous but has varying preferred operations across different architectural levels. Architectures with different operations are pictured separately on the picture.}
 \end{figure}
 
 To sample architectures we use hypernetwork \citep{hypernetworks}. This network generates parameters for another network, which is called target network.
@@ -123,6 +126,10 @@ We conduct experiments on CIFAR and MNIST datasets to evaluate performance of th
 \section{Problem statement}
 
 In our paper, we address the problem of classification. We assume that the dataset $\mathcal{D} = (\mathbf{X}, \mathbf{y})$ is given, where $\mathbf{X}$ represents the feature matrix and $\mathbf{y})$ represents the target vector. The dataset is divided into training and validation subsets, for which the loss functions $\mathcal{L}_{train}$ and $\mathcal{L}_{val}$ are specified, respectively. In general, these functions depend on the feature matrix, target vector, and the predicted outputs of the training model. However, in our paper, we will not explicitly state their dependence on the dataset, assuming it implicitly. Therefore, we will state that the loss functions depend only on the predicted outputs of the model.
+
+Let $\mathcal{V} = \{ 1, \ldots, N \}$ be a set of vertices, where N is a number of vertices, and $\mathcal{E} = \{ (i, j) \in V \times V \mid i < j \}$ a set of edges between them. A set of possible operations
+$\mathcal{O}$ usually contains pooling, convolutions, etc.
+For each edge there is an operation $o \in \mathcal{O}$ that transits information from one node to another.
 
 Contrary to the selection of one single architecture in conventional NAS algorithm \citep{darts, enas, nas}, this paper focuses on the problem of selecting a well-performing neural network ensemble with diverse architectures from the NAS search space, i.e., neural ensemble search (NES).
 
@@ -146,10 +153,6 @@ Below we briefly described our method for solving problem of classification with
 
 \subsection{Architecture}
 
-Let $\mathcal{V} = \{ 1, \ldots, N \}$ be a set of vertices, where N is a number of vertices, and $\mathcal{E} = \{ (i, j) \in V \times V \mid i < j \}$ a set of edges between them. A set of possible operations
-$\mathcal{O}$ usually contains pooling, convolutions, etc.
-For each edge there is an operation $o \in \mathcal{O}$ that transits information from one node to another.
-
 NAS algorithms search for optimal architecture. 
 As it was mentioned below, architecture of neural network is a set of operations between nodes. In NAS methods architecture is a vector constructed by following rules. For each edge $(i, j) \in \mathcal{E}$, \mbox{\boldmath{$\alpha^{(i, j)}$}} is a vector, which assigns impact of each operation.
 \mbox{\boldmath{$\alpha$}} is a concatenation of all structural parameters vectors \mbox{\boldmath{$\alpha^{(i, j)}$}}.
@@ -169,7 +172,7 @@ Assuming $\tau$ close to one we obtain a smoothed architecture that contains the
 
 In order to control diversity we employ the concept of hypernetwork. A hypernetwork is a parametric mapping from $[0, \Lambda]$ to the set of model structural parameters \citep{darts-cc}.
 $$
-\mbox{\boldmath{$\alpha$}} : [0, \Lambda], \mathbb{R}^u \to \mathbb{R}^s
+\mbox{\boldmath{$\alpha$}} : [0, \Lambda] \times \mathbb{R}^u \to \mathbb{R}^s
 $$
 Where $\mathbb{R}^u$ is a hypernetwork parametric space and $\mathbb{R}^s$ is space of model structural parameters. In this terms \mbox{\boldmath{$\alpha$}} can be redefined using hypernetwork
 
@@ -188,39 +191,82 @@ In our method $\lambda$ is sampled from predefined distribution $p(\lambda) = U(
 Upon concluding the method description, a reformulated problem can be postulated: specifically, architectures are obtained via hypernetwork, and the regularizer is subtracted from the loss function. A varied parameter $\lambda$, ranging from 0 to $\Lambda$, is distributed according to a uniform distribution.
 
 \begin{gather*}
-    \min_{\mbox{\boldmath{$\alpha$}}} \mathbb{E}_{\lambda \sim U(0, \Lambda)} [\mathcal{L}_{val}(\mbox{\boldmath{$w^*$}}, \mbox{\boldmath{$\alpha$}}(\lambda)) - \lambda JS(\mbox{\boldmath{$\alpha^*$}}, \mbox{\boldmath{$\alpha$}}(\lambda))] \\
+        \min_{\mbox{\boldmath{$\alpha$}}} \mathbb{E}_{\lambda \sim U(0, \Lambda)} [\mathcal{L}_{val}(w^*, \mbox{\boldmath{$\alpha$}}(\lambda)) - \lambda JS(\mbox{\boldmath{$\alpha^*$}}, \mbox{\boldmath{$\alpha$}}(\lambda))] \\
     s.t. \text{ } \mbox{\boldmath{$w^*$}} = \arg \min_{\mbox{\boldmath{$w$}}} \mathbb{E}_{\lambda \sim U(0, \Lambda)}[\mathcal{L}_{train}(\mbox{\boldmath{$w$}}, \mbox{\boldmath{$\alpha$}}(\lambda))]
 \end{gather*}
 
-Following problem resolution, a new architecture is acquired and subsequently included into the ensemble.
-It is assured that said architecture is diverse enough from its counterparts and performs an acceptable level of accuracy.
+Following problem resolution, a new architecture is acquired and subsequently included into the ensemble. It is assured that said architecture is diverse enough from its counterparts and performs an acceptable level of accuracy. Formal algorithm is written down as \hyperref[alg:1]{Algorithm 1}.
+\begin{figure}[h]  
+  \begin{minipage}{.6\linewidth}
+    \begin{algorithm}[H]
+    \caption{}\label{alg:1}
+        \begin{algorithmic}
+                \State Initialize: $N \in \mathbb{N}$, $\mathcal{S} = \varnothing$, hypernetwork
+            \State $S \gets \{ \mbox{\boldmath{$\alpha^*$}} \}$ \Comment{Result os NAS}
+            \For{$i = 1, \ldots, N$}
+                \State Sample $\lambda \sim U(0, \Lambda)$
+                \State $\mathcal{S} \gets \mathcal{S} \cup \{ \alpha(\lambda, \mbox{\boldmath{$\alpha^*$}}) \}$ \Comment{$\alpha$ gaind from hypernetwork}
+            \EndFor
+            \State \textbf{Return:} S as a resulting ensemble
+        \end{algorithmic}
+    \end{algorithm}
+  \end{minipage}
+\end{figure}
 
 \section{Computational experiment}
 
-First goal of computational experiment is to investigate dependence of resulting architecture's performance on $\lambda$ and also to estimate suitable $\Lambda$.
-We conducted experiments on fashionMNIST dataset for $\lambda = 1, \ldots, 40$ and looked at resulting architecture and accuracy.
+In this study, we conducted a series of experiments on the fashionMNIST dataset \citep{xiao2017fashion} using a convolutional neural network (CNN) model.
+Specifically, we utilized a one-layer architecture with six nodes and seven possible operations for each edge, as outlined in the DARTS methodology \cite{darts}.
+Our optimizer was stochastic gradient descent (SGD), and we employed a cosine annealing learning rate scheduler with a minimum learning rate of 0.001. The loss criterion utilized in this study was CrossEntropyLoss.
+
+First goal of computational experiment is to investigate dependence of resulting architecture's performance and their diversity on $\lambda$.
 Second goal is to investigate effectiveness of ensembling.
-We investigated how to choose architectures that on one hand are diverse enough and on other hand perform accaptable accuracy.
+Main question is how to choose architectures that on one hand are diverse enough and on other hand perform acceptable accuracy.
 
 \subsection{Comparison of architectures}
+
+We employed the Differentiable Architecture Search (DARTS) algorithm to sample a base architecture with $\lambda = 0$. Subsequently, we sampled architectures for values of $\lambda$ ranging from 1 to 40, recording the resulting architectural structures and their corresponding classification performance. Specifically, we sought to examine the impact of varying levels of architectural diversity on model accuracy, with the aim of identifying optimal architectures for the given task. 
 
 The results of the investigation into various neural network architectures are presented in \hyperref[tab:prelim]{Tab. 1}.
 The table displays the maximum accuracy achieved by the sampled architectures, along with the number of matched operations between nodes.
 Last one indicates the number of edges between nodes that contain the same operation in the obtained architecture and the basic architecture, gained from NAS.
 The graphical visualization of the architectures can be found in \hyperref[fig:graph1]{Fig. 2}.
 
+\begin{table}[h   ]
+	\centering
+	\begin{tabular}{lll}
+		\midrule
+		$\lambda$     & accuracy, \% & matched operations \\
+		\midrule
+        0 (optimum) & 92.10 & 18 \\ 
+        5  & 89.66 &  2   \\
+		10  & 90.59   &  2   \\
+		15 & 90.09   &  1   \\
+		20 & 88.52   &  1   \\
+      25 & 88.54   &  1   \\
+      30 & 87.42   &  2   \\
+      35 & 86.41   &  1   \\
+      40 & 88.67   &  2  \\
+      \hline
+    \vspace{0.1cm}      
+	\end{tabular}
+    \caption{Table to test captions and labels.}
+	\label{tab:prelim}
+\end{table}
+
 \begin{figure}[h]
 	\centering
-	\begin{subfigure}{.5\textwidth}
-	  \centering
-	  \includegraphics[width=1\linewidth]{fig2}
-	  \caption{Dependence of accuracy on diverse parameter $\lambda$}
+	\begin{subfigure}{.46\textwidth}
+        \centering
+	    \includegraphics[width=1\linewidth]{fig2}
+	  \caption{Dependence of performed accuracy on diversity parameter $\lambda$}
 	  \label{fig:graph1}
 	\end{subfigure}%
-	\begin{subfigure}{.5\textwidth}
+    \hspace{1cm}
+	\begin{subfigure}{.46\textwidth}
 	  \centering
 	  \includegraphics[width=1\linewidth]{fig3}
-	  \caption{Dependence of matching edges number on diverse parameter $\lambda$}
+	  \caption{Dependence of matching edges number on diversity parameter $\lambda$}
 	  \label{fig:graph2}
 	\end{subfigure}
 	\caption{Graphical results of computational experiment}
@@ -232,44 +278,24 @@ However, contrary to our expectations, the amount of intersecting edges depicted
 The reason for this can be attributed to the non-convexity of the optimized function, which causes the algorithm to converge to different minima.
 However, we can obtain a higher number of intersecting edges by using a negative $\lambda$.
 
-\begin{table}[h   ]
-	\caption{preliminary results}
-	\centering
-	\begin{tabular}{lll}
-		\midrule
-		$\lambda$     & accuracy, \% & matched operations \\
-		\midrule
-        0 (optimum) & 91.24 & - \\ 
-        1/2  & 91.24 &  4   \\
-		2  & 91.26   &  3   \\
-		32 & 89.21   &  2   \\
-		64 & 87.09   &  1   \\
-		\bottomrule
-	\end{tabular}
-	\label{tab:prelim}
-\end{table}
 
 \subsection{Ensembling effectiveness investigation}
 
 To investigate the effectiveness of ensembling, we employed the following methodology.
-We randomly sampled several architectures corresponding to different diverse parameters $\lambda$ chosen randomly and uniformaly from a range of 0 to $\Lambda$.
+We randomly sampled three architectures corresponding to different diverse parameters $\lambda$ chosen randomly and uniformly from a range of 0 to $\Lambda$.
 The obtained architectures were then included in an ensemble, and the accuracy of the resulting ensemble was measured.
 By changing the diversity limit $\Lambda$, we were able to control the diversity of our deep learning models.
 The graphical results of our experiment are depicted in \hyperref[fig:graph3]{Fig.3}.
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\textwidth]{fig4}
-    \caption{\label{fig:graph3} Dependance of effectiveness of deep learning models ensemble on diversity limit $\Lambda$}
+    \includegraphics[width=0.55\textwidth]{fig4}
+    \caption{\label{fig:graph3} Dependence of effectiveness of deep learning models ensemble on diversity limit $\Lambda$}
 \end{figure}
 
 \section{Conclusion}
 
-In this paper, we proposed a novel method for sampling ensembles of deep learning models with diversity control.
-Our method utilizes a hypernetwork to generate diverse architectures by perturbing a base architecture in terms of Jensen-Shannon divergence.
-The diversity of the ensemble is controlled by a penalty term added to the loss function, which encourages the ensemble members to be diverse.
-We conducted experiments on the Fashion-MNIST dataset and demonstrated that our method performs compatible results in terms of accuracy and architectural diversity.
-Overall, our proposed method shows potential for practical applications in deep learning ensembling. asddasd
+In this paper, we proposed a novel method for sampling ensembles of deep learning models with diversity control. Our method utilizes a hypernetwork to generate diverse architectures by perturbing a base architecture in terms of Jensen-Shannon divergence. The diversity of the ensemble is controlled by a penalty term added to the loss function, which encourages the ensemble members to be diverse. We conducted experiments on the Fashion-MNIST dataset and demonstrated that our method performs compatible results in terms of accuracy and architectural diversity. Overall, our proposed method shows potential for practical applications in deep learning ensembling.
 
 \bibliography{references}
 
