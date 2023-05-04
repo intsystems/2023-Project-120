@@ -17,9 +17,9 @@
 
     :Название исследуемой задачи: Differentiable algorithm for searching ensembles of deep learning models with diversity control
     :Тип научной работы: M1P
-    :Автор: Peter Babkin Konstantinovich
-    :Научный руководитель: степень, Фамилия Имя Отчество
-    :Научный консультант(при наличии): степень, Фамилия Имя Отчество
+    :Автор: Peter Babkin
+    :Научный руководитель: Bakhteev Oleg
+    :Научный консультант(при наличии): Yakovlev Konstantin, Petrushina Ksenia
 
 Abstract
 ========
@@ -33,21 +33,9 @@ divergence which keeps the algorythm differentiable. To evaluate the performance
 experiments on the Fashion-MNIST and CIFAR-10 datasets and compare the resulting ensembles with ones sampled by other
 searching algorithms.
 
-Research publications
-===============================
-1. 
-
-Presentations at conferences on the topic of research
-================================================
-1. 
 
 Supplementations
 ================
 1. `Link review <https://docs.google.com/document/d/1-P76pFjZ2E4BIjLVU8KY1NC7g1Qt-YFh6zX-V67FTUU/edit>`_.
 2. `Overleaf for paper <https://www.overleaf.com/3228135464pjqvcbkvrgwb>`_.
 3. `Overleaf for slides <https://www.overleaf.com/8856778119stvyckdjvffv>`_.
-
-Software modules developed as part of the study
-======================================================
-1. A python package *mylib* with all implementation `here <https://github.com/intsystems/ProjectTemplate/tree/master/src>`_.
-2. A code with all experiment visualisation `here <https://github.comintsystems/ProjectTemplate/blob/master/code/main.ipynb>`_. Can use `colab <http://colab.research.google.com/github/intsystems/ProjectTemplate/blob/master/code/main.ipynb>`_.
