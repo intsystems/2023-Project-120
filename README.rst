@@ -27,4 +27,4 @@ Supplementations
 
 Links
 =====
-1. `Link review <https://github.com/intsystems/2023-Project-120/blob/master/paper/main.pdf>`_.
+1. `Paper pdf <https://github.com/intsystems/2023-Project-120/blob/master/paper/main.pdf>`_.
