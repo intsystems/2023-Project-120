@@ -28,17 +28,18 @@ import torch
 import json
 
 
-def JSD(net_1_logits, net_2_logits):
-    from torch.functional import F
-    net_1_probs = F.softmax(net_1_logits, dim=0)
-    net_2_probs = F.softmax(net_2_logits, dim=0)
-    
-    total_m = 0.5 * (net_1_probs + net_2_probs)
-    
-    loss = 0.0
-    loss += F.kl_div(F.log_softmax(net_1_logits, dim=0), total_m, reduction="batchmean") 
-    loss += F.kl_div(F.log_softmax(net_2_logits, dim=0), total_m, reduction="batchmean") 
-    return (0.5 * loss)
+class JSD(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.kl = torch.nn.KLDivLoss(reduction='batchmean', log_target=True)
+
+    def forward(self, net_1_logits: torch.tensor, net_2_logits: torch.tensor):
+        from torch.functional import F
+        p = F.softmax(net_1_logits, dim=0)
+        q = F.softmax(net_2_logits, dim=0)
+        p, q = p.view(-1, p.size(-1)), q.view(-1, q.size(-1))
+        m = (0.5 * (p + q)).log2()
+        return 0.5 * (self.kl(m, p.log2()) + self.kl(m, q.log2()))
 
 
 class MyDartsTrainer(DartsTrainer):
@@ -46,7 +47,7 @@ class MyDartsTrainer(DartsTrainer):
                  num_epochs, dataset, grad_clip=5.,
                  learning_rate=2.5E-3, batch_size=64, workers=4,
                  device=None, log_frequency=None,
-                 arc_learning_rate=3.0E-4, unrolled=False, tau=0.95, decay=0):
+                 arc_learning_rate=3.0E-4, unrolled=False, tau=0.95, decay=0, lmbd=1e3):
         super().__init__(model, loss, metrics, optimizer,
                  num_epochs, dataset, grad_clip,
                  learning_rate, batch_size, workers,
@@ -54,13 +55,15 @@ class MyDartsTrainer(DartsTrainer):
                  arc_learning_rate, unrolled)
         self.tau = tau
         self.decay = decay
-        
+        self.lmbd = lmbd
+        self.jsd = JSD()
+        print(self.decay)
         operations = { "maxpool": 0, "avgpool": 1, "skipconnect": 2, "sepconv3x3": 3,
                       "sepconv5x5": 4, "dilconv3x3" : 5, "dilconv5x5" : 6 } # индексы операций по названиям (в соответствии с nas_modules)
         O = len(operations) # кол-во операций
 
         self.optimal = {} # выдает сглаженный тензор операций по названию операции
-        with open('checkpoints/0/arc.json') as f:
+        with open('checkpoints/0.0/arc.json') as f:
             checkpoint_optimum = json.load(f) # оптимальная архитектура в виде словаря
 
         for name, _ in self.nas_modules:
@@ -80,11 +83,11 @@ class MyDartsTrainer(DartsTrainer):
         count = 0
         for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
             if name in self.optimal.keys():
-                res += JSD(module.alpha, torch.log(self.optimal[name]))
+                res += self.jsd(module.alpha, torch.log(self.optimal[name]))
                 count += 1
         return res / count
 
     def _logits_and_loss(self, X, y):
         logits = self.model(X)
-        loss = self.loss(logits, y) - self.decay * self.JSD() # обращаем внимание, что регуляризатор не влияет на первый уровень оптимизации
+        loss = self.loss(logits, y) + self.lmbd * (self.decay - self.JSD()) ** 2 # обращаем внимание, что регуляризатор не влияет на первый уровень оптимизации
         return logits, loss
