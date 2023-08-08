@@ -17,7 +17,6 @@ from nni.retiarii import fixed_arch
 
 logger = logging.getLogger('nni')
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 writer = SummaryWriter()
 
@@ -118,12 +117,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     dataset_train, dataset_valid = datasets.get_dataset("fashionmnist", cutout_length=16)
-    
+
     best_top1s = []
-    for decay in [29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]:
+    for decay in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
         print(f"checkpoints/{decay}")
         with fixed_arch(f"checkpoints/{decay}" + "/arc.json"):
-        # with fixed_arch(args.save_folder + "/arc.json"):
+            # with fixed_arch(args.save_folder + "/arc.json"):
             model = CNN(32, 1, 36, 10, args.layers, auxiliary=True)
         criterion = nn.CrossEntropyLoss()
 
@@ -134,15 +133,15 @@ if __name__ == "__main__":
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=1E-6)
 
         train_loader = torch.utils.data.DataLoader(dataset_train,
-                                                batch_size=args.batch_size,
-                                                shuffle=True,
-                                                num_workers=args.workers,
-                                                pin_memory=True)
+                                                   batch_size=args.batch_size,
+                                                   shuffle=True,
+                                                   num_workers=args.workers,
+                                                   pin_memory=True)
         valid_loader = torch.utils.data.DataLoader(dataset_valid,
-                                                batch_size=args.batch_size,
-                                                shuffle=False,
-                                                num_workers=args.workers,
-                                                pin_memory=True)
+                                                   batch_size=args.batch_size,
+                                                   shuffle=False,
+                                                   num_workers=args.workers,
+                                                   pin_memory=True)
 
         best_top1 = 0.
         for epoch in range(args.epochs):
