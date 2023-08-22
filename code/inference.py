@@ -39,7 +39,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     dataset_train, dataset_valid = datasets.get_dataset("fashionmnist", cutout_length=16)
 
-    Lambdas = range(30, 42)
+    Lambdas = range(3, 42)
     res_dict_accur = {}
     for Lambda in Lambdas:
         models = []
@@ -49,11 +49,11 @@ if __name__ == "__main__":
             if float(dir.split('\\')[-1]) in lambdas:
             # if dir == "./checkpoints\\0":
                 print(dir)
-                with fixed_arch(dir + "/arc.json"):
+                with fixed_arch(dir + "/arc_cifar.json"):
                     model = CNN(32, 1, 36, 10, args.layers, auxiliary=True)
                 model.eval()
                 model.to(device)
-                model.load_state_dict(torch.load(dir + "/mod.json"))
+                model.load_state_dict(torch.load(dir + "/mod_cifar.json"))
                 
                 models.append(model)
 

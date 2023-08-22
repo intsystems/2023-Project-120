@@ -15,7 +15,7 @@ from utils import accuracy, MyDartsTrainer
 
 
 logger = logging.getLogger('nni')
-dataset = "fashionmnist"
+dataset = "cifar10"
 
 if __name__ == "__main__":
     parser = ArgumentParser("darts")
@@ -24,7 +24,8 @@ if __name__ == "__main__":
     parser.add_argument("--log-frequency", default=10, type=int)
     parser.add_argument("--epochs", default=50, type=int)
     parser.add_argument("--channels", default=16, type=int)
-    parser.add_argument("--decay", default=0.0, type=float, help='regularization coefficient')
+    parser.add_argument("--decay", default=0.0, type=float, help="JS standart")
+    parser.add_argument("--lmbd", default=1e3, type=float, help='regularization coefficient')
     parser.add_argument("--unrolled", default=False, action="store_true")
     parser.add_argument("--visualization", default=False, action="store_true")
     parser.add_argument("--save-folder", default='checkpoints/0', type=str)
@@ -33,7 +34,7 @@ if __name__ == "__main__":
     dataset_train, dataset_valid = datasets.get_dataset(dataset)
 
 
-    for decay in [29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]:
+    for decay in range(11, 41):
         print(f"decay = {decay}")
         if dataset == "fashionmnist":
             model = CNN(32, 1, args.channels, 10, args.layers)
@@ -59,5 +60,5 @@ if __name__ == "__main__":
         trainer.fit()
         final_architecture = trainer.export()
         print('Final architecture:', trainer.export())
-        json.dump(trainer.export(), open(f"checkpoints/{decay}" + '/arc.json', 'w+'))
+        json.dump(trainer.export(), open(f"checkpoints/{decay}" + '/arc_cifar.json', 'w+'))
     
