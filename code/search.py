@@ -29,12 +29,13 @@ if __name__ == "__main__":
     parser.add_argument("--unrolled", default=False, action="store_true")
     parser.add_argument("--visualization", default=False, action="store_true")
     parser.add_argument("--save-folder", default='checkpoints/0', type=str)
+    parser.add_argument("--start-arch", default=None, type=str)
     args = parser.parse_args()
 
     dataset_train, dataset_valid = datasets.get_dataset(dataset)
 
 
-    for decay in range(11, 41):
+    for decay in range(14, 15):
         print(f"decay = {decay}")
         if dataset == "fashionmnist":
             model = CNN(32, 1, args.channels, 10, args.layers)
@@ -55,10 +56,19 @@ if __name__ == "__main__":
             log_frequency=args.log_frequency,
             unrolled=args.unrolled,
             tau=0.95, # параметр сглаживания для подсчета дивергенции
-            decay=decay # вес регуляризации
+            decay=decay, # вес регуляризации
+            lmbd=args.lmbd,
+            learning_rate=2.5E-3,
+            arc_learning_rate=3.0E-1,
         )
         trainer.fit()
         final_architecture = trainer.export()
         print('Final architecture:', trainer.export())
         json.dump(trainer.export(), open(f"checkpoints/{decay}" + '/arc_cifar.json', 'w+'))
-    
+
+
+
+
+
+
+

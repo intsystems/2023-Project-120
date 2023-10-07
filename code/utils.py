@@ -1,6 +1,3 @@
-# Copyright (c) Microsoft Corporation.
-# Licensed under the MIT license.
-
 def accuracy(output, target, topk=(1,)):
     """ Computes the precision@k for the specified values of k """
     maxk = max(topk)
@@ -26,6 +23,7 @@ from nni.retiarii.oneshot.pytorch import DartsTrainer
 import torch.nn.functional as F
 import torch
 import json
+from torch.distributions import RelaxedOneHotCategorical
 
 
 def JSD(net_1_logits, net_2_logits):
@@ -46,21 +44,25 @@ class MyDartsTrainer(DartsTrainer):
                  num_epochs, dataset, grad_clip=5.,
                  learning_rate=2.5E-3, batch_size=64, workers=4,
                  device=None, log_frequency=None,
-                 arc_learning_rate=3.0E-4, unrolled=False, tau=0.95, decay=0):
+                 arc_learning_rate=3.0E-4, unrolled=False,
+                 weight=1e3, lambd=0, tau=0.9, t=0.2, optimalPath='checkpoints/fashionMNIST/optimal/arc.json', train_as_optimal=False):
         super().__init__(model, loss, metrics, optimizer,
                  num_epochs, dataset, grad_clip,
                  learning_rate, batch_size, workers,
                  device, log_frequency,
                  arc_learning_rate, unrolled)
+        self.weight = weight
+        self.lambd = lambd
         self.tau = tau
-        self.decay = decay
+        self.t = t
+        self.train_as_optimal = train_as_optimal
         
         operations = { "maxpool": 0, "avgpool": 1, "skipconnect": 2, "sepconv3x3": 3,
                       "sepconv5x5": 4, "dilconv3x3" : 5, "dilconv5x5" : 6 } # индексы операций по названиям (в соответствии с nas_modules)
         O = len(operations) # кол-во операций
 
         self.optimal = {} # выдает сглаженный тензор операций по названию операции
-        with open('checkpoints/0/arc_cifar.json') as f:
+        with open(optimalPath) as f:
             checkpoint_optimum = json.load(f) # оптимальная архитектура в виде словаря
 
         for name, _ in self.nas_modules:
@@ -75,7 +77,10 @@ class MyDartsTrainer(DartsTrainer):
 
                 self.optimal[name] = t
 
-    def JSD(self): # подсчет дивергенции между своей и оптимальной архитектурой
+    def JSD(self):
+        '''
+        Подсчет дивергенции между своей и оптимальной архитектурой
+        '''
         res = 0.0
         count = 0
         for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
@@ -83,8 +88,30 @@ class MyDartsTrainer(DartsTrainer):
                 res += JSD(module.alpha, torch.log(self.optimal[name]))
                 count += 1
         return res / count
+    
+    def edgeComparison(self):
+        '''
+        Регуляризатор на основе количество общих  ребер
+        '''
+        count = 0
+        sum = 0
+        print(self.nas_modules)
+        for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
+            if name in self.optimal.keys():
+                print(F.softmax(module.alpha, dim=0), type(F.softmax(module.alpha, dim=0)))
+                alpha = F.softmax(module.alpha, dim=0)
+                alpha0 = RelaxedOneHotCategorical(probs=self.optimal[name], temperature=self.t).rsample().t()
+                print(torch.dot(alpha, alpha0))
+                sum += torch.dot(alpha, alpha0)
+                count += 1
+        return sum / count
+    
 
     def _logits_and_loss(self, X, y):
         logits = self.model(X)
-        loss = self.loss(logits, y) - self.decay * self.JSD() # обращаем внимание, что регуляризатор не влияет на первый уровень оптимизации
+        if self.train_as_optimal:
+            loss = self.loss(logits, y)
+        else:    
+            loss = self.loss(logits, y) + (self.lambd - self.edgeComparison()) ** 2
+        # self.decay * self.JSD() # обращаем внимание, что регуляризатор не влияет на первый уровень оптимизации
         return logits, loss
