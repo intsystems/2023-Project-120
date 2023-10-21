@@ -1,6 +1,3 @@
-# Copyright (c) Microsoft Corporation.
-# Licensed under the MIT license.
-
 def accuracy(output, target, topk=(1,)):
     """ Computes the precision@k for the specified values of k """
     maxk = max(topk)
@@ -26,6 +23,7 @@ from nni.retiarii.oneshot.pytorch import DartsTrainer
 import torch.nn.functional as F
 import torch
 import json
+from torch.distributions import RelaxedOneHotCategorical
 
 
 def JSD(net_1_logits, net_2_logits):
@@ -46,36 +44,57 @@ class MyDartsTrainer(DartsTrainer):
                  num_epochs, dataset, grad_clip=5.,
                  learning_rate=2.5E-3, batch_size=64, workers=4,
                  device=None, log_frequency=None,
-                 arc_learning_rate=3.0E-4, unrolled=False, tau=0.95, decay=0):
+                 arc_learning_rate=3.0E-4, unrolled=False,
+                 weight=1e3, 
+                 lambd=0, 
+                 tau=0.9, 
+                 t_alpha=0.3, t_beta=0.4,
+                 optimalPath='checkpoints/fashionMNIST/optimal/arc.json', 
+                 train_as_optimal=False):
         super().__init__(model, loss, metrics, optimizer,
                  num_epochs, dataset, grad_clip,
                  learning_rate, batch_size, workers,
                  device, log_frequency,
                  arc_learning_rate, unrolled)
+        self.weight = weight
+        self.lambd = lambd
         self.tau = tau
-        self.decay = decay
+        self.t_alpha = t_alpha
+        self.t_beta = t_beta
+        self.train_as_optimal = train_as_optimal
+
+        if train_as_optimal:
+            return
         
         operations = { "maxpool": 0, "avgpool": 1, "skipconnect": 2, "sepconv3x3": 3,
                       "sepconv5x5": 4, "dilconv3x3" : 5, "dilconv5x5" : 6 } # индексы операций по названиям (в соответствии с nas_modules)
         O = len(operations) # кол-во операций
 
-        self.optimal = {} # выдает сглаженный тензор операций по названию операции
-        with open('checkpoints/0/arc.json') as f:
-            checkpoint_optimum = json.load(f) # оптимальная архитектура в виде словаря
+        self.optimal_arc = {} # выдает сглаженный тензор операций по названию операции
+        with open(optimalPath) as f:
+            self.checkpoint_optimum = json.load(f) # оптимальная архитектура в виде словаря
 
         for name, _ in self.nas_modules:
-            if name in checkpoint_optimum.keys() and name[-6:] != 'switch': # если ребро есть в оптимальной архитектуре и модуль не reduce_n#_switch
-                operation = checkpoint_optimum[name] # имя оптимальной операции
-
+            if name[-6:] != 'switch': # если ребро есть в оптимальной архитектуре и модуль не reduce_n#_switch
+                operation = self.checkpoint_optimum[name] # имя оптимальной операции
                 index = operations[operation] # индекс оптимальной операции
                 t = torch.zeros(O, device=('cuda' if torch.cuda.is_available() else 'cpu'))
                 t[index] = 1
-
                 t = t * self.tau + 1 / O * (1 - self.tau)
+                self.optimal_arc[name] = t
+            elif name[-6:] == 'switch':
+                parents = self.checkpoint_optimum[name]
+                n = int(name[-8])
+                t = torch.zeros(n)
+                t[parents] = 1
+                self.optimal_arc[n] = t
 
-                self.optimal[name] = t
 
-    def JSD(self): # подсчет дивергенции между своей и оптимальной архитектурой
+
+    def JSD(self):
+        '''
+        Подсчет дивергенции между своей и оптимальной архитектурой
+        '''
         res = 0.0
         count = 0
         for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
@@ -83,8 +102,37 @@ class MyDartsTrainer(DartsTrainer):
                 res += JSD(module.alpha, torch.log(self.optimal[name]))
                 count += 1
         return res / count
+    
+    def edgeCount(self):
+        '''
+        Регуляризатор на основе количество общих  ребер
+        '''
+        sum = 0
+        beta = {}
+        for name, module in self.nas_modules:
+            if name[-6:] == 'switch':
+                n = int(name[-8])
+                beta[n] = RelaxedOneHotCategorical(logits=module.alpha, temperature=self.t_beta).rsample().t()
+
+        for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
+            if name[-6:] != 'switch':
+                # print(F.softmax(module.alpha, dim=0), type(F.softmax(module.alpha, dim=0)))
+                alpha = RelaxedOneHotCategorical(logits=module.alpha, temperature=self.t_alpha).rsample().t()
+                alpha_opt = self.optimal_arc[name]
+                # alpha0 = RelaxedOneHotCategorical(probs=self.optimal[name], temperature=self.t).rsample().t()
+                # print(torch.dot(alpha, alpha0))
+                p, n = int(name[-1]), int(name[-4])
+                sum += torch.dot(alpha, alpha_opt) * beta[n][p] * self.optimal_arc[n][p]
+        return sum
+    
+    def get_nas_modeles(self):
+        return self.nas_modules
 
     def _logits_and_loss(self, X, y):
         logits = self.model(X)
-        loss = self.loss(logits, y) - self.decay * self.JSD() # обращаем внимание, что регуляризатор не влияет на первый уровень оптимизации
+        if self.train_as_optimal:
+            loss = self.loss(logits, y)
+        else:    
+            loss = self.loss(logits, y) + self.weight * (self.lambd - self.edgeCount()) ** 2
+        # self.decay * self.JSD() # обращаем внимание, что регуляризатор не влияет на первый уровень оптимизации
         return logits, loss
