@@ -70,7 +70,8 @@ class MyDartsTrainer(DartsTrainer):
                       "sepconv5x5": 4, "dilconv3x3" : 5, "dilconv5x5" : 6 } # индексы операций по названиям (в соответствии с nas_modules)
         O = len(operations) # кол-во операций
 
-        self.optimal = {} # выдает сглаженный тензор операций по названию операции
+        self.optimal_arc = {}
+
         with open(optimalPath) as f:
             checkpoint_optimum = json.load(f) # оптимальная архитектура в виде словаря
 
@@ -87,7 +88,7 @@ class MyDartsTrainer(DartsTrainer):
                 n = int(name[-8])
                 t = torch.zeros(n)
                 t[parents] = 1
-                self.optimal_arc[n] = t
+                self.optimal_arc[n] = t # 1 стоят там, где ребро есть, 0 там, где ребра нет
 
 
     def JSD(self):
@@ -127,17 +128,15 @@ class MyDartsTrainer(DartsTrainer):
         beta = {}
         for name, module in self.nas_modules:
             if name[-6:] == 'switch':
-                n = int(name[-8])
-                beta[n] = RelaxedOneHotCategorical(logits=module.alpha, temperature=self.t_beta).rsample().t()
+                n = int(name[-8]) # номер ноды
+                beta[n] = RelaxedOneHotCategorical(logits=module.alpha, temperature=self.t_beta).rsample().t() # записываем распределения по ребрам
 
-        for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
+        for name, module in self.nas_modules: # разность по ребрам
             if name[-6:] != 'switch':
-                # print(F.softmax(module.alpha, dim=0), type(F.softmax(module.alpha, dim=0)))
                 alpha = RelaxedOneHotCategorical(logits=module.alpha, temperature=self.t_alpha).rsample().t()
                 alpha_opt = self.optimal_arc[name]
                 # alpha0 = RelaxedOneHotCategorical(probs=self.optimal[name], temperature=self.t).rsample().t()
-                # print(torch.dot(alpha, alpha0))
-                p, n = int(name[-1]), int(name[-4])
+                p, n = int(name[-1]), int(name[-4]) # номер parent и node
                 sum += torch.dot(alpha, alpha_opt) * beta[n][p] * self.optimal_arc[n][p]
         return sum
     
