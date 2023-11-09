@@ -37,7 +37,7 @@ class AuxiliaryHead(nn.Module):
 
 
 class Node(nn.Module):
-    def __init__(self, node_id, num_prev_nodes, channels, num_downsample_connect):
+    def __init__(self, node_id, num_prev_nodes, channels, num_downsample_connect, n_chosen):
         super().__init__()
         self.ops = nn.ModuleList()
         choice_keys = []
@@ -55,7 +55,7 @@ class Node(nn.Module):
                     ("dilconv5x5", ops.DilConv(channels, channels, 5, stride, 4, 2, affine=False))
                 ]), label=choice_keys[-1]))
         self.drop_path = ops.DropPath()
-        self.input_switch = InputChoice(n_candidates=len(choice_keys), n_chosen=2, label="{}_switch".format(node_id))
+        self.input_switch = InputChoice(n_candidates=len(choice_keys), n_chosen=n_chosen, label="{}_switch".format(node_id))
 
     def forward(self, prev_nodes):
         assert len(self.ops) == len(prev_nodes)
@@ -66,7 +66,7 @@ class Node(nn.Module):
 
 class Cell(nn.Module):
 
-    def __init__(self, n_nodes, channels_pp, channels_p, channels, reduction_p, reduction):
+    def __init__(self, n_nodes, channels_pp, channels_p, channels, reduction_p, reduction, n_chosen):
         super().__init__()
         self.reduction = reduction
         self.n_nodes = n_nodes
@@ -83,7 +83,7 @@ class Cell(nn.Module):
         self.mutable_ops = nn.ModuleList()
         for depth in range(2, self.n_nodes + 2):
             self.mutable_ops.append(Node("{}_n{}".format("reduce" if reduction else "normal", depth),
-                                         depth, channels, 2 if reduction else 0))
+                                         depth, channels, 2 if reduction else 0, n_chosen=n_chosen))
 
     def forward(self, s0, s1):
         # s0, s1 are the outputs of previous previous cell and previous cell, respectively.
@@ -99,7 +99,7 @@ class Cell(nn.Module):
 class CNN(nn.Module):
     
     def __init__(self, input_size, in_channels, channels, n_classes, n_layers, n_nodes=4,
-                 stem_multiplier=3, auxiliary=False):
+                 stem_multiplier=3, auxiliary=False, n_chosen=2):
         super().__init__()
         self.in_channels = in_channels
         self.channels = channels
@@ -126,7 +126,7 @@ class CNN(nn.Module):
                 c_cur *= 2
                 reduction = True
 
-            cell = Cell(n_nodes, channels_pp, channels_p, c_cur, reduction_p, reduction)
+            cell = Cell(n_nodes, channels_pp, channels_p, c_cur, reduction_p, reduction, n_chosen)
             self.cells.append(cell)
             c_cur_out = c_cur * n_nodes
             channels_pp, channels_p = channels_p, c_cur_out

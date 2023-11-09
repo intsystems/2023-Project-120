@@ -59,6 +59,7 @@ if __name__ == "__main__":
             lmbd=args.lmbd,
             learning_rate=2.5E-3,
             arc_learning_rate=3.0E-1,
+            n_chosen=1,
         )
         trainer.fit()
         final_architecture = trainer.export()

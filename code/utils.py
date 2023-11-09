@@ -50,7 +50,9 @@ class MyDartsTrainer(DartsTrainer):
                  tau=0.9, 
                  t_alpha=0.3, t_beta=0.4,
                  optimalPath='checkpoints/fashionMNIST/optimal/arc.json', 
-                 train_as_optimal=False):
+                 train_as_optimal=False,
+                 n_chosen=2,
+                 ):
         super().__init__(model, loss, metrics, optimizer,
                  num_epochs, dataset, grad_clip,
                  learning_rate, batch_size, workers,
@@ -62,6 +64,7 @@ class MyDartsTrainer(DartsTrainer):
         self.t_alpha = t_alpha
         self.t_beta = t_beta
         self.train_as_optimal = train_as_optimal
+        self.n_chosen = n_chosen
 
         if train_as_optimal:
             return
@@ -151,3 +154,4 @@ class MyDartsTrainer(DartsTrainer):
             loss = self.loss(logits, y) + self.weight * (self.lambd - self.edgeCount()) ** 2
         # self.decay * self.JSD() # обращаем внимание, что регуляризатор не влияет на первый уровень оптимизации
         return logits, loss
+    
