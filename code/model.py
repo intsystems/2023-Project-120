@@ -158,3 +158,199 @@ class CNN(nn.Module):
         for module in self.modules():
             if isinstance(module, ops.DropPath):
                 module.p = p
+# ===============================================================================================
+# ===============================================================================================
+# ===============================================================================================
+
+from nni.retiarii.oneshot.pytorch import DartsTrainer
+import torch.nn.functional as F
+import torch
+import json
+from torch.distributions import RelaxedOneHotCategorical
+import logging
+from nni.retiarii.oneshot.pytorch.utils import AverageMeterGroup
+_logger = logging.getLogger(__name__)
+import utils
+
+def JSD(net_1_logits, net_2_logits):
+    from torch.functional import F
+    net_1_probs = F.softmax(net_1_logits, dim=0)
+    net_2_probs = F.softmax(net_2_logits, dim=0)
+    
+    total_m = 0.5 * (net_1_probs + net_2_probs)
+    
+    loss = 0.0
+    loss += F.kl_div(F.log_softmax(net_1_logits, dim=0), total_m, reduction="batchmean") 
+    loss += F.kl_div(F.log_softmax(net_2_logits, dim=0), total_m, reduction="batchmean") 
+    return (0.5 * loss)
+
+
+class MyDartsTrainer(DartsTrainer):
+    def __init__(self, model, loss, metrics, optimizer,
+                 num_epochs, dataset, grad_clip=5.,
+                 learning_rate=2.5E-3, batch_size=64, workers=4,
+                 device=None, log_frequency=None,
+                 arc_learning_rate=3.0E-4, unrolled=False,
+                 weight=1e3, 
+                 lambd=0, 
+                 tau=0.9, 
+                 t_alpha=0.3, t_beta=0.4,
+                 optimalPath='checkpoints/fashionMNIST/optimal/arc.json', 
+                 train_as_optimal=False,
+                 n_chosen=2,
+                 ):
+        super().__init__(model, loss, metrics, optimizer,
+                 num_epochs, dataset, grad_clip,
+                 learning_rate, batch_size, workers,
+                 device, log_frequency,
+                 arc_learning_rate, unrolled)
+        self.weight = weight
+        self.lambd = lambd
+        self.tau = tau
+        self.t_alpha = t_alpha
+        self.t_beta = t_beta
+        self.train_as_optimal = train_as_optimal
+        self.n_chosen = n_chosen
+
+        if train_as_optimal:
+            return
+        
+        operations = { "maxpool": 0, "avgpool": 1, "skipconnect": 2, "sepconv3x3": 3,
+                      "sepconv5x5": 4, "dilconv3x3" : 5, "dilconv5x5" : 6 } # индексы операций по названиям (в соответствии с nas_modules)
+        O = len(operations) # кол-во операций
+
+        self.optimal_arc = {} # архитектура в виде векторов, где 1 стоят там, где есть ребро
+
+        with open(optimalPath) as f:
+            self.checkpoint_optimum = json.load(f) # оптимальная архитектура в виде словаря
+
+        for name, _ in self.nas_modules:
+            if name[-6:] != 'switch': # если ребро есть в оптимальной архитектуре и модуль не reduce_n#_switch
+                operation = self.checkpoint_optimum[name] # имя оптимальной операции
+                index = operations[operation] # индекс оптимальной операции
+                t = torch.zeros(O, device=('cuda' if torch.cuda.is_available() else 'cpu'))
+                t[index] = 1
+                t = t * self.tau + 1 / O * (1 - self.tau)
+                self.optimal_arc[name] = t
+            elif name[-6:] == 'switch':
+                parents = self.checkpoint_optimum[name]
+                n = int(name[-8])
+                t = torch.zeros(n)
+                t[parents] = 1
+                self.optimal_arc[n] = t # 1 стоят там, где ребро есть, 0 там, где ребра нет
+
+
+    def JSD(self):
+        '''
+        Подсчет дивергенции между своей и оптимальной архитектурой
+        '''
+        res = 0.0
+        count = 0
+        for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
+            if name in self.optimal.keys():
+                res += JSD(module.alpha, torch.log(self.optimal[name]))
+                count += 1
+        return res / count
+
+    def edgeComparisonOldVersion(self):
+        '''
+        Регуляризатор на основе количество общих  ребер
+        '''
+        count = 0
+        sum = 0
+        print(self.nas_modules)
+        for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
+            if name in self.optimal.keys():
+                print(F.softmax(module.alpha, dim=0), type(F.softmax(module.alpha, dim=0)))
+                alpha = F.softmax(module.alpha, dim=0)
+                alpha0 = RelaxedOneHotCategorical(probs=self.optimal[name], temperature=self.t).rsample().t()
+                print(torch.dot(alpha, alpha0))
+                sum += torch.dot(alpha, alpha0)
+                count += 1
+        return sum / count
+    
+    def edgeCount(self):
+        '''
+        Регуляризатор на основе количество общих  ребер
+        '''
+        sum = 0
+        beta = {}
+        for name, module in self.nas_modules:
+            if name[-6:] == 'switch':
+                n = int(name[-8]) # номер ноды
+                beta[n] = RelaxedOneHotCategorical(logits=module.alpha, temperature=self.t_beta).rsample().t() # записываем распределения по ребрам
+
+        for name, module in self.nas_modules: # разность по ребрам
+            if name[-6:] != 'switch':
+                alpha = RelaxedOneHotCategorical(logits=module.alpha, temperature=self.t_alpha).rsample().t()
+                alpha_opt = self.optimal_arc[name]
+                # alpha0 = RelaxedOneHotCategorical(probs=self.optimal[name], temperature=self.t).rsample().t()
+                p, n = int(name[-1]), int(name[-4]) # номер parent и node
+                sum += torch.dot(alpha, alpha_opt) * beta[n][p] * self.optimal_arc[n][p]
+        return sum
+    
+    def get_nas_modeles(self):
+        return self.nas_modules
+
+    def _logits_and_loss(self, X, y):
+        logits = self.model(X)
+        if self.train_as_optimal:
+            loss = self.loss(logits, y)
+        else:
+            loss = self.loss(logits, y) + self.weight * (self.lambd - self.edgeCount()) ** 2
+        # self.decay * self.JSD() # обращаем внимание, что регуляризатор не влияет на первый уровень оптимизации
+        return logits, loss
+
+    def common_edges_with_opt(self):
+        optimal_arc = self.checkpoint_optimum
+        arc = self.export()
+        return utils.common_edges(arc, optimal_arc)
+
+    def _train_one_epoch(self, epoch, writer):
+        self.model.train()
+        meters = AverageMeterGroup()
+        for step, ((trn_X, trn_y), (val_X, val_y)) in enumerate(zip(self.train_loader, self.valid_loader)):
+            trn_X, trn_y = trn_X.to(self.device), trn_y.to(self.device)
+            val_X, val_y = val_X.to(self.device), val_y.to(self.device)
+
+            # phase 1. architecture step
+            self.ctrl_optim.zero_grad()
+            if self.unrolled:
+                self._unrolled_backward(trn_X, trn_y, val_X, val_y)
+            else:
+                self._backward(val_X, val_y)
+            self.ctrl_optim.step()
+
+            # phase 2: child network step
+            self.model_optim.zero_grad()
+            logits, loss = self._logits_and_loss(trn_X, trn_y)
+            loss.backward()
+            if self.grad_clip > 0:
+                nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)  # gradient clipping
+            self.model_optim.step()
+
+            metrics = self.metrics(logits, trn_y)
+            metrics['loss'] = loss.item()
+            meters.update(metrics)
+            if self.log_frequency is not None and step % self.log_frequency == 0:
+                _logger.info('Epoch [%s/%s] Step [%s/%s]  %s', epoch + 1,
+                             self.num_epochs, step + 1, len(self.train_loader), meters)
+            writer.add('loss', epoch * len(self.train_loader) + step, loss.item())
+        return meters
+                
+    def fit(self, writer=None, warmup_weight=False, warmup_t=False):
+        for i in range(self.num_epochs):
+            self._train_one_epoch(i, writer)
+
+            if warmup_weight:
+                # self.weight = 2 ** (i / self.num_epochs * 7)
+                self.weight = i * 10
+            if warmup_t:
+                self.t_alpha = 0.8 * 2 ** (- i / self.num_epochs * 5)
+                self.t_beta = 0.8 * 2 ** (- i / self.num_epochs * 5)
+            writer.add('weight', i, self.weight)
+            writer.add('tempreture', i, self.t_beta)
+            writer.add('edges', i, self.common_edges_with_opt())
+                
+
+
