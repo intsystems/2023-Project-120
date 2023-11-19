@@ -37,10 +37,13 @@ class Writer:
             self.clean_name(name)
     def show(self):
         N = len(self.data.keys())
-        fig, ax = plt.subplots(nrows=1, ncols=N, figsize=(18, 7))
+        fig, ax = plt.subplots(nrows=1, ncols=N, figsize=(18, 4))
         for i, name in enumerate(self.data.keys()):
-            print(i, name)
             ax[i].set_title(name)
+            if name in ['edges', 'loss', 'accuracy']:
+                ax[i].set_xlabel('iterations')
+            else:
+                ax[i].set_xlabel('epochs')
             x, y = self.get(name)
             ax[i].plot(x, y)
 

@@ -333,24 +333,23 @@ class MyDartsTrainer(DartsTrainer):
             metrics['loss'] = loss.item()
             meters.update(metrics)
             if self.log_frequency is not None and step % self.log_frequency == 0:
-                _logger.info('Epoch [%s/%s] Step [%s/%s]  %s', epoch + 1,
-                             self.num_epochs, step + 1, len(self.train_loader), meters)
-            writer.add('loss', epoch * len(self.train_loader) + step, loss.item())
+                print(f'Epoch [{epoch + 1}/{self.num_epochs}] Step [{step + 1}/{len(self.train_loader)}]  {meters}')
+                writer.add('loss', epoch * len(self.train_loader) + step, loss.item())
+                writer.add('edges', epoch * len(self.train_loader) + step, self.common_edges_with_opt())
+                writer.add('accuracy', epoch * len(self.train_loader) + step, meters['acc1'].val)
         return meters
                 
-    def fit(self, writer=None, warmup_weight=False, warmup_t=False):
+    def fit(self, writer=None, warmup_weight=None, warmup_t=None):
         for i in range(self.num_epochs):
-            self._train_one_epoch(i, writer)
-
-            if warmup_weight:
+            if warmup_weight is not None:
                 # self.weight = 2 ** (i / self.num_epochs * 7)
-                self.weight = i * 10
-            if warmup_t:
-                self.t_alpha = 0.8 * 2 ** (- i / self.num_epochs * 5)
-                self.t_beta = 0.8 * 2 ** (- i / self.num_epochs * 5)
+                self.weight = warmup_weight(i, self.num_epochs)
+            if warmup_t is not None:
+                self.t_alpha = warmup_t(i, self.num_epochs)
+                self.t_beta = warmup_t(i, self.num_epochs)
             writer.add('weight', i, self.weight)
             writer.add('tempreture', i, self.t_beta)
-            writer.add('edges', i, self.common_edges_with_opt())
+            self._train_one_epoch(i, writer)
                 
 
 
