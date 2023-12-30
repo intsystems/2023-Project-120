@@ -33,6 +33,8 @@ Architectural space can be viwed as a continious space where architectures diffe
 
 <img src="https://github.com/intsystems/2023-Project-120/blob/master/figures/fig1.jpeg" width="300" height="300">
 
+Our method aims to find a solution to sample architectures to be included into ensemble in one shoot under assumptions introduced by the picture above.
+
 Links
 =====
 1. `Paper pdf <https://github.com/intsystems/2023-Project-120/blob/master/paper/main.pdf>`_.
