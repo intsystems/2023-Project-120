@@ -1,3 +1,5 @@
+Scientific research
+
 | Problem                                                      | Differentiable algorithm for searching ensembles of deep learning models with diversity control |
 |--------------------------------------------------------------|---------------------------------------------------------------------------------------------|
 | Author                                                       | Peter Babkin |
