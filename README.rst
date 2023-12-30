@@ -25,8 +25,8 @@ All packages are available through simple installation:
 
 ``pip install -r requirements.txt``
 
-Result
-======
+Results
+=======
 
 Links
 =====
