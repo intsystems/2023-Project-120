@@ -1,10 +1,10 @@
 Scientific research
-
-| Problem                                                      | Differentiable algorithm for searching ensembles of deep learning models with diversity control |
-|--------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| Author                                                       | Peter Babkin |
-| Scientific adviser                                           | Bakhteev Oleg |
-| Scientific consultant                                        | Yakovlev Konstantin, Petrushina Ksenia |
+|-----------------------|-----|
+| Problem               | Differentiable algorithm for searching ensembles of deep learning models with diversity control |
+|-----------------------|-------------------------------------------------------------------------------------------------|
+| Author                | Peter Babkin |
+| Scientific adviser    | Bakhteev Oleg |
+| Scientific consultant | Yakovlev Konstantin, Petrushina Ksenia |
 
 
 Abstract
