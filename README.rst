@@ -1,7 +1,6 @@
 .. class:: center
 
     :Problem: Differentiable algorithm for searching ensembles of deep learning models with diversity control
-    :Work type: M1P
     :Author: Peter Babkin
     :Scientific adviser: Bakhteev Oleg
     :Scientific consultant: Yakovlev Konstantin, Petrushina Ksenia
@@ -18,13 +17,19 @@ divergence which keeps the algorythm differentiable. To evaluate the performance
 experiments on the Fashion-MNIST and CIFAR-10 datasets and compare the resulting ensembles with ones sampled by other
 searching algorithms.
 
+Run experimnet
+==============
 
-Supplementations
-================
-1. `Link review <https://docs.google.com/document/d/1-P76pFjZ2E4BIjLVU8KY1NC7g1Qt-YFh6zX-V67FTUU/edit>`_.
-2. `Overleaf for paper <https://www.overleaf.com/3228135464pjqvcbkvrgwb>`_.
-3. `Overleaf for slides <https://www.overleaf.com/8856778119stvyckdjvffv>`_.
+To run basic code go to folder code and open main.ipynb.
+All packages are available through simple installation:
+
+``` pip install -r requirements.txt ```
+
+
 
 Links
 =====
 1. `Paper pdf <https://github.com/intsystems/2023-Project-120/blob/master/paper/main.pdf>`_.
+2. `Link review <https://docs.google.com/document/d/1-P76pFjZ2E4BIjLVU8KY1NC7g1Qt-YFh6zX-V67FTUU/edit>`_.
+3. `Overleaf for paper <https://www.overleaf.com/3228135464pjqvcbkvrgwb>`_.
+4. `Overleaf for slides <https://www.overleaf.com/8856778119stvyckdjvffv>`_.
