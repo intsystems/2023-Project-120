@@ -1,5 +1,5 @@
-Scientific research
-|-----------------------|-----|
+# Scientific research
+
 | Problem               | Differentiable algorithm for searching ensembles of deep learning models with diversity control |
 |-----------------------|-------------------------------------------------------------------------------------------------|
 | Author                | Peter Babkin |
@@ -7,8 +7,8 @@ Scientific research
 | Scientific consultant | Yakovlev Konstantin, Petrushina Ksenia |
 
 
-Abstract
-========
+## Abstract
+
 
 This paper is developed to introduce a new method of creating ensembles of deep learning models. 
 Many modern researches were focused on creating effective and efficient algorithms of differentiable architecture search,
@@ -19,23 +19,17 @@ divergence which keeps the algorythm differentiable. To evaluate the performance
 experiments on the Fashion-MNIST and CIFAR-10 datasets and compare the resulting ensembles with ones sampled by other
 searching algorithms.
 
-Run experimnet
-==============
+## Run experimnet
+
 
 To run basic code go to folder code and open main.ipynb.
 All packages are available through simple installation:
 
 ``pip install -r requirements.txt``
 
-Deep ensemble
-=============
+## Deep ensemble
 
-.. image:: /figures/fig1.jpeg
-   :width: 800
-
-    Architectural space
-
-    Olololo.
+!(Architectural space)[figures/fig1.jpeg]
 
 Links
 =====
