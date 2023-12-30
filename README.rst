@@ -28,7 +28,7 @@ All packages are available through simple installation:
 Deep ensemble
 =============
 .. figure:: figures/fig1.jpeg
-       :scale: 0.3
+       :scale: 4 %
        :align: center
        :alt: Not found
 
