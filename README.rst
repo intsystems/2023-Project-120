@@ -28,7 +28,7 @@ All packages are available through simple installation:
 Deep ensemble
 =============
 
-.. image:: figures/fig1.jpeg
+.. image:: /figures/fig1.jpeg
    :width: 800
 
     Architectural space
