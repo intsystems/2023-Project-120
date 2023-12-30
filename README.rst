@@ -25,8 +25,9 @@ All packages are available through simple installation:
 
 ``pip install -r requirements.txt``
 
-Results
-=======
+Deep ensemble
+=============
+![Architectural space](/images/picture.jpg)
 
 Links
 =====
