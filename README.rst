@@ -27,7 +27,7 @@ All packages are available through simple installation:
 
 Deep ensemble
 =============
-![Architectural space](/figures/fig1.jpeg)
+.. |Architectural space| image:: figures/fig1.jpeg
 
 Links
 =====
