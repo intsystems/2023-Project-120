@@ -23,9 +23,10 @@ Run experimnet
 To run basic code go to folder code and open main.ipynb.
 All packages are available through simple installation:
 
-``` pip install -r requirements.txt ```
+``pip install -r requirements.txt``
 
-
+Result
+======
 
 Links
 =====
