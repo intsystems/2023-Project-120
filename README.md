@@ -29,7 +29,7 @@ All packages are available through simple installation:
 
 ## Deep ensemble
 
-<img src="https://github.com/intsystems/2023-Project-120/blob/master/figures/fig1.jpeg" width="200" height="200">
+<img src="https://github.com/intsystems/2023-Project-120/blob/master/figures/fig1.jpeg" width="300" height="300">
 
 Links
 =====
