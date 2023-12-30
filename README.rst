@@ -28,9 +28,11 @@ All packages are available through simple installation:
 Deep ensemble
 =============
 .. figure:: figures/fig1.jpeg
-       :scale: 4 %
-       :align: center
-       :alt: Not found
+   :height: 300 px
+   :width: 300 px
+   :scale: 4 %
+   :align: center
+   :alt: Not found
 
        Architectural space
 
