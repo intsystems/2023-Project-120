@@ -27,7 +27,14 @@ All packages are available through simple installation:
 
 Deep ensemble
 =============
-.. |Architectural space| image:: figures/fig1.jpeg
+.. figure:: figures/fig1.jpeg
+       :scale: 60 %
+       :align: center
+       :alt: Not found
+
+       Architectural space
+
+       Olololo.
 
 Links
 =====
