@@ -29,6 +29,8 @@ All packages are available through simple installation:
 
 ## Deep ensemble
 
+Architectural space can be viwed as a continious space where architectures differ in terms of edges. The further architecture is from the optimal one, the worse it preforms.
+
 <img src="https://github.com/intsystems/2023-Project-120/blob/master/figures/fig1.jpeg" width="300" height="300">
 
 Links
