@@ -45,8 +45,8 @@ Our method aims to find a solution to sample architectures to be included into e
 
 Links
 =====
-1. `Paper pdf <https://github.com/intsystems/2023-Project-120/blob/master/paper/main.pdf>`_.
-2. `Link review <https://docs.google.com/document/d/1-P76pFjZ2E4BIjLVU8KY1NC7g1Qt-YFh6zX-V67FTUU/edit>`_.
-3. `Overleaf for paper <https://www.overleaf.com/3228135464pjqvcbkvrgwb>`_.
-4. `Overleaf for slides <https://www.overleaf.com/8856778119stvyckdjvffv>`_.
-5. `collab with experiment <https://colab.research.google.com/drive/1XuTAz06I4tLZm7clVGZnYuBKBii8vHH_?usp=sharing>`_.
+1. [Paper pdf](https://github.com/intsystems/2023-Project-120/blob/master/paper/main.pdf)
+2. [Litreture review](https://docs.google.com/document/d/1-P76pFjZ2E4BIjLVU8KY1NC7g1Qt-YFh6zX-V67FTUU/edit)
+3. [Overleaf for paper](https://www.overleaf.com/3228135464pjqvcbkvrgwb)
+4. [Overleaf for slides](https://www.overleaf.com/8856778119stvyckdjvffv)
+5. [Collab with experiment](https://colab.research.google.com/drive/1XuTAz06I4tLZm7clVGZnYuBKBii8vHH_?usp=sharing)
