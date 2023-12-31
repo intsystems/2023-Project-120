@@ -19,13 +19,21 @@ divergence which keeps the algorythm differentiable. To evaluate the performance
 experiments on the Fashion-MNIST and CIFAR-10 datasets and compare the resulting ensembles with ones sampled by other
 searching algorithms.
 
-## Run experimnet
+## Run experiment
 
 
-To run basic code go to folder code and open main.ipynb.
+To run basic code go to folder code and open ``demo.ipynb``.
 All packages are available through simple installation:
 
 ``pip install -r requirements.txt``
+
+Demonstration includes:
+
+- Search of the optimal architecture
+- Search for the range of hyperparameters
+- Diversity investigation
+- Retrain of the gained architectures
+- Validation of the ensemble
 
 ## Deep ensemble
 
