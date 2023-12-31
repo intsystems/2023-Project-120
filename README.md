@@ -22,10 +22,18 @@ searching algorithms.
 ## Run experimnet
 
 
-To run basic code go to folder code and open main.ipynb.
+To run basic code go to folder code and open demo.ipynb.
 All packages are available through simple installation:
 
 ``pip install -r requirements.txt``
+
+Demonstration includes:
+
+- Search of the optimal architecture
+- Search for the range of hyperparameters
+- Diversity investigation
+- Retrain of the gained architectures
+- Validation of the ensemble
 
 ## Deep ensemble
 
