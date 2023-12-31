@@ -22,7 +22,7 @@ searching algorithms.
 ## Run experimnet
 
 
-To run basic code go to folder code and open _demo.ipynb_.
+To run basic code go to folder code and open **demo.ipynb**.
 All packages are available through simple installation:
 
 ``pip install -r requirements.txt``
