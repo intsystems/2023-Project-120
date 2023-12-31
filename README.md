@@ -19,7 +19,7 @@ divergence which keeps the algorythm differentiable. To evaluate the performance
 experiments on the Fashion-MNIST and CIFAR-10 datasets and compare the resulting ensembles with ones sampled by other
 searching algorithms.
 
-## Run experimnet
+## Run experiment
 
 
 To run basic code go to folder code and open ``demo.ipynb``.
