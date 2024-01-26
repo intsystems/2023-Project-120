@@ -228,7 +228,7 @@ class MyDartsTrainer(DartsTrainer):
             if name[-6:] != 'switch': # если ребро есть в оптимальной архитектуре и модуль не reduce_n#_switch
                 operation = self.checkpoint_optimum[name] # имя оптимальной операции
                 index = operations[operation] # индекс оптимальной операции
-                t = torch.zeros(O, device=('cuda' if torch.cuda.is_available() else 'cpu'))
+                t = torch.zeros(O, device=self.device)
                 t[index] = 1
                 t = t * self.tau + 1 / O * (1 - self.tau)
                 self.optimal_arc[name] = t
@@ -334,21 +334,22 @@ class MyDartsTrainer(DartsTrainer):
             meters.update(metrics)
             if self.log_frequency is not None and step % self.log_frequency == 0:
                 print(f'Epoch [{epoch + 1}/{self.num_epochs}] Step [{step + 1}/{len(self.train_loader)}]  {meters}')
-                writer.add('loss', epoch * len(self.train_loader) + step, loss.item())
-                writer.add('edges', epoch * len(self.train_loader) + step, self.common_edges_with_opt())
-                writer.add('accuracy', epoch * len(self.train_loader) + step, meters['acc1'].val)
+                if writer is not None:
+                    writer.add('loss', epoch * len(self.train_loader) + step, loss.item())
+                    writer.add('edges', epoch * len(self.train_loader) + step, self.common_edges_with_opt())
+                    writer.add('accuracy', epoch * len(self.train_loader) + step, meters['acc1'].val)
         return meters
                 
     def fit(self, writer=None, warmup_weight=None, warmup_t=None):
         for i in range(self.num_epochs):
             if warmup_weight is not None:
-                # self.weight = 2 ** (i / self.num_epochs * 7)
                 self.weight = warmup_weight(i, self.num_epochs)
             if warmup_t is not None:
                 self.t_alpha = warmup_t(i, self.num_epochs)
                 self.t_beta = warmup_t(i, self.num_epochs)
-            writer.add('weight', i, self.weight)
-            writer.add('tempreture', i, self.t_beta)
+            if writer is not None:
+                writer.add('weight', i, self.weight)
+                writer.add('tempreture', i, self.t_beta)
             self._train_one_epoch(i, writer)
                 
 

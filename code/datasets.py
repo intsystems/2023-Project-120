@@ -4,7 +4,7 @@
 import numpy as np
 import torch
 from torchvision import transforms
-from torchvision.datasets import CIFAR10, FashionMNIST
+from torchvision.datasets import CIFAR100, CIFAR10, FashionMNIST
 
 
 class Cutout(object):
@@ -34,6 +34,9 @@ def get_dataset(cls, cutout_length=0):
     if cls == "cifar10":
         MEAN = [0.49139968, 0.48215827, 0.44653124]
         STD = [0.24703233, 0.24348505, 0.26158768]
+    elif cls == "cifar100":
+        MEAN = [0.4914, 0.4822, 0.4465]
+        STD = [0.5071, 0.4867, 0.4408]
     elif cls == "fashionmnist":
         MEAN = [0.49139968]
         STD = [0.24703233]
@@ -59,6 +62,9 @@ def get_dataset(cls, cutout_length=0):
     elif cls == "fashionmnist":
         dataset_train = FashionMNIST(root="./data", train=True, download=True, transform=train_transform)
         dataset_valid = FashionMNIST(root="./data", train=False, download=True, transform=valid_transform)
+    elif cls == "cifar100":
+        dataset_train = CIFAR100(root="./data", train=True, download=True, transform=train_transform)
+        dataset_valid = CIFAR100(root="./data", train=False, download=True, transform=valid_transform)
     else:
         raise NotImplementedError
     return dataset_train, dataset_valid
