@@ -144,7 +144,7 @@ slides/slides.toc
 slides/slides.nav
 slides/slides.snm
 
-code/data
-code/runs
+code/engine/data
+code/engine/runs
 code/*.sh
-code/checkpoints
+code/checkpoints/*

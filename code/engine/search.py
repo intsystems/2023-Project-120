@@ -9,9 +9,9 @@ from argparse import ArgumentParser
 import torch
 import torch.nn as nn
 
-import datasets
+import engine.datasets as datasets
 from model import CNN
-from utils import accuracy, MyDartsTrainer
+from engine.utils import accuracy, MyDartsTrainer
 
 
 logger = logging.getLogger('nni')

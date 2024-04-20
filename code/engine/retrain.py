@@ -9,8 +9,8 @@ import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
-import datasets
-import utils
+import engine.datasets as datasets
+import engine.utils as utils
 from model import CNN
 from nni.retiarii.oneshot.pytorch.utils import AverageMeter
 from nni.retiarii import fixed_arch
