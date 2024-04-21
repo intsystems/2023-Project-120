@@ -146,5 +146,4 @@ slides/slides.snm
 
 code/engine/data
 code/engine/runs
-code/*.sh
 code/checkpoints/*
