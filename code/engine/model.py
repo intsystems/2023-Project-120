@@ -6,7 +6,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 
-import ops
+import engine.ops as ops
 from nni.retiarii.nn.pytorch import LayerChoice, InputChoice
 
 class AuxiliaryHead(nn.Module):

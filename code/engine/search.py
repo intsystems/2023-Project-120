@@ -1,23 +1,30 @@
-# Copyright (c) Microsoft Corporation.
-# Licensed under the MIT license.
-
+from importlib import reload
 import json
 import logging
 import time
 from argparse import ArgumentParser
+import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
 
-import engine.datasets as datasets
-from model import CNN
-from engine.utils import accuracy, MyDartsTrainer
+import engine.datasets
+from engine.model import CNN, MyDartsTrainer
 
+import engine.utils
+import numpy as np
+import yaml
 
 logger = logging.getLogger('nni')
 dataset = "cifar10"
 
+
 if __name__ == "__main__":
+    with open("configs/search.yaml", "r") as file:
+        yaml_data = yaml.load(file, Loader=yaml.FullLoader)
+
+    print(yaml_data)
+
     parser = ArgumentParser("darts")
     parser.add_argument("--layers", default=1, type=int)
     parser.add_argument("--batch-size", default=64, type=int)
@@ -31,7 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("--lambd", default=0.0, type=float, help='lambda')
     args = parser.parse_args()
 
-    dataset_train, dataset_valid = datasets.get_dataset(dataset)
+    dataset_train, dataset_valid = engine.datasets.get_dataset(dataset)
 
 
     for decay in [29]:
@@ -47,7 +54,7 @@ if __name__ == "__main__":
         trainer = MyDartsTrainer( # MyDartsTrainer
             model=model,
             loss=criterion, # =mycriterion,
-            metrics=lambda output, target: accuracy(output, target, topk=(1,)),
+            metrics=lambda output, target: engine.utils.accuracy(output, target, topk=(1,)),
             optimizer=optim,
             num_epochs=args.epochs,
             dataset=dataset_train,
