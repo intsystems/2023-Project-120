@@ -19,6 +19,35 @@ def accuracy(output, target, topk=(1,)):
 
 #==========================================================================
 import matplotlib.pyplot as plt
+from model import CNN
+import os
+import json
+
+def make_dir(new_folder_path):
+    if not os.path.exists(new_folder_path):
+        os.makedirs(new_folder_path)
+
+def get_model(args):
+    if args['DATASET'] == 'fashionmnist':
+        model = CNN(32, 1, args['CHANNELS'], 10, args['LAYERS'])
+    if args['DATASET'] == 'cifar10':
+        model = CNN(32, 3, args['CHANNELS'], 10, args['LAYERS'])
+    if args['DATASET'] == 'cifar100':
+        model = CNN(32, 3, args['CHANNELS'], 100, args['LAYERS'])
+    return model
+
+def get_save_path(args):
+    return args['SAVE_FOLDER'] + '/' + args['DATASET']
+
+def warmup_weight(epoch, epochs, MIN=0.1, MAX=2):
+    return MIN + (epoch / epochs) * (MAX - MIN)
+
+def warmup_t(epoch, epochs, MIN=0.01, MAX=0.5):
+    return MIN + (epoch / epochs) * (MAX - MIN)
+
+def save_arc(arcitecture, file_path):
+    with open(file_path, "w+") as file:
+        json.dump(arcitecture, file, indent=4)
 
 class Writer:
     def __init__(self):

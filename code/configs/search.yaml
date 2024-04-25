@@ -1,16 +1,24 @@
 # Searching
-N_CHOSEN:           1
-REGIME:             optimal # / edges / random
-
-LAMBDAS:            [1, 2] # for edges
+REGIME:             random
+                    # random # / optimal / edges
+# For edges
+WEIGHT:             2
+LAMBDAS:            [1, 2]
 TAU:                0.95
+OPTIMAL_NUMBER:     0 # in {SAVE_FOLDER}/{dataset}/optimal
 
+# For optimal
+OPTIMAL_AMOUNT:     1
+
+# For random
+COMMON_EDGES:       [0, 1, 2, 3]
 
 # Files
 SAVE_FOLDER:        checkpoints
 DATASET:            cifar100
 
 # Architecture
+N_CHOSEN:           1
 LAYERS:             1
 CHANNELS:           10
 UNROLLED:           False
@@ -18,7 +26,7 @@ UNROLLED:           False
 # Optimization
 EPOCHS:             1
 BATCH_SIZE:         64
-LOG_FREQUENCY:      10
+LOG_FREQUENCY:      50
 VISUALIZATION:      False
 LEARNING_RATE:      2.5e-3
 ARC_LEARNING_RATE:  3.0e-1

@@ -8,71 +8,124 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 
-import engine.datasets
-from engine.model import CNN, MyDartsTrainer
+import datasets
+from model import EdgeNES
 
-import engine.utils
-import numpy as np
+import utils
 import yaml
+import os
+import numpy as np
 
 logger = logging.getLogger('nni')
-dataset = "cifar10"
 
+
+def get_optimal_arc(args):
+    path = utils.get_save_path(args)
+    save_path = path + '/' + 'optimal/' + 'arc_' + str(args['OPTIMAL_NUMBER']) + '.json'
+    print('Loading optimal architecture from ' + save_path + '...')
+    with open(save_path) as f:
+        optimal_arc_dict = json.load(f)
+    print('Optimal arcitecture:', optimal_arc_dict)
+    print()
+    return optimal_arc_dict
+
+def get_config():
+    print('Reading configs/search.yaml...')
+    with open("configs/search.yaml", "r") as file:
+        args = yaml.load(file, Loader=yaml.FullLoader)
+    print('Configuration for searching:')
+    for key, value in args.items():
+        print(f'{key} : {value}')
+    print()
+    return args
 
 if __name__ == "__main__":
-    with open("configs/search.yaml", "r") as file:
-        yaml_data = yaml.load(file, Loader=yaml.FullLoader)
+    args = get_config()
 
-    print(yaml_data)
+    print('Loading dataset...')
+    dataset_train, dataset_valid = datasets.get_dataset(args['DATASET'])
+    print()
 
-    parser = ArgumentParser("darts")
-    parser.add_argument("--layers", default=1, type=int)
-    parser.add_argument("--batch-size", default=64, type=int)
-    parser.add_argument("--log-frequency", default=10, type=int)
-    parser.add_argument("--epochs", default=1, type=int)
-    parser.add_argument("--channels", default=16, type=int)
-    parser.add_argument("--unrolled", default=False, action="store_true")
-    parser.add_argument("--visualization", default=False, action="store_true")
-    parser.add_argument("--save-folder", default='checkpoints/0', type=str)
-    parser.add_argument("--weight", default=0.0, type=float, help='weight')
-    parser.add_argument("--lambd", default=0.0, type=float, help='lambda')
-    args = parser.parse_args()
+    path = utils.get_save_path(args)
 
-    dataset_train, dataset_valid = engine.datasets.get_dataset(dataset)
+    print('Making dirs...')
+    utils.make_dir(path + '/optimal')
+    utils.make_dir(path + '/edges')
+    utils.make_dir(path + '/random')
+    if args['REGIME'] == 'edges':
+        for lambd in args['LAMBDAS']:
+            utils.make_dir(path + f'/edges/lam={lambd}')
+    if args['REGIME'] == 'random':
+        for lambd in args['COMMON_EDGES']:
+            utils.make_dir(path + f'/random/amount={lambd}')
+    print()
+
+    if args['REGIME'] == 'optimal':
+        for i in range(args['OPTIMAL_AMOUNT']):
+            print(f"Start searching optimal architecture [{i+1}/{args['OPTIMAL_AMOUNT']}]...")
+            model = utils.get_model(args)
+            trainer = EdgeNES(
+                model=model,
+                metrics=lambda output, target: utils.accuracy(output, target, topk=(1,)),
+                num_epochs=args['EPOCHS'],
+                dataset=dataset_train,
+                batch_size=args['BATCH_SIZE'],
+                log_frequency=args['LOG_FREQUENCY'],
+                unrolled=args['UNROLLED'],
+                regime='optimal',
+                learning_rate=args['LEARNING_RATE'],
+                arc_learning_rate=args['ARC_LEARNING_RATE'],
+                n_chosen=args['N_CHOSEN']
+            )
+            trainer.fit()
+            final_architecture = trainer.export()
+            print('Final architecture:', final_architecture)
+            number = max([-1] + [int(file[4:file.find('.json')]) for file in os.listdir(path + '/optimal')]) + 1
+            print('Saving to ', path + f'/optimal/arc_{number}.json...')
+            json.dump(final_architecture, open(path + f'/optimal/arc_{number}.json', 'w+'))
+            print()
+            
+
+    if args['REGIME'] == 'random':
+        optimal_arc_dict = get_optimal_arc(args)
+        for lambd in args['COMMON_EDGES']:
+            edges_to_change = np.random.choice(8, 4 - lambd, replace=False)
+            for edge in edges_to_change:
+                pass
 
 
-    for decay in [29]:
-        print(f"decay = {decay}")
-        if dataset == "fashionmnist":
-            model = CNN(32, 1, args.channels, 10, args.layers)
-        if dataset == "cifar10":
-            model = CNN(32, 3, args.channels, 10, args.layers)
+    if args['REGIME'] == 'edges':
+        optimal_arc_dict = get_optimal_arc(args)
+        for lambd in args['LAMBDAS']:
+            print(f"Start searching architecture for lambda = {lambd}...")
+            model = utils.get_model(args)
 
-        criterion = nn.CrossEntropyLoss() # mycriterion()
-        optim = torch.optim.SGD(model.parameters(), 0.025, momentum=0.9, weight_decay=3.0E-4)
-        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim, args.epochs, eta_min=0.001)
-        trainer = MyDartsTrainer( # MyDartsTrainer
-            model=model,
-            loss=criterion, # =mycriterion,
-            metrics=lambda output, target: engine.utils.accuracy(output, target, topk=(1,)),
-            optimizer=optim,
-            num_epochs=args.epochs,
-            dataset=dataset_train,
-            batch_size=args.batch_size,
-            log_frequency=args.log_frequency,
-            unrolled=args.unrolled,
-            tau=0.95, # параметр сглаживания для подсчета дивергенции
-            decay=decay, # вес регуляризации
-            lmbd=args.lmbd,
-            learning_rate=2.5E-3,
-            arc_learning_rate=3.0E-1,
-            n_chosen=1,
-        )
-        trainer.fit()
-        final_architecture = trainer.export()
-        print('Final architecture:', trainer.export())
-        json.dump(trainer.export(), open(f"checkpoints/{decay}" + '/arc_cifar.json', 'w+'))
-
+            trainer = EdgeNES(
+                model=model,
+                metrics=lambda output, target: utils.accuracy(output, target, topk=(1,)),
+                num_epochs=args['EPOCHS'],
+                dataset=dataset_train,
+                batch_size=args['BATCH_SIZE'],
+                log_frequency=args['LOG_FREQUENCY'],
+                unrolled=args['UNROLLED'],
+                regime='edges',
+                learning_rate=args['LEARNING_RATE'],
+                arc_learning_rate=args['ARC_LEARNING_RATE'],
+                n_chosen=args['N_CHOSEN'],
+                optimal_arc_dict=optimal_arc_dict,
+                tau=args['TAU'],
+                weight_func=utils.warmup_weight,
+                t_func=utils.warmup_t,
+                lambd=lambd,
+            )
+            trainer.fit()
+            final_architecture = trainer.export()
+            print('Final architecture:', final_architecture)
+            number = max([-1] + [int(file[4:file.find('.json')]) for file in os.listdir(path + f'/edges/lam={lambd}')]) + 1
+            save_path = path + f'/edges/lam={lambd}/arc_{number}.json'
+            print('Saving to ', save_path, '...')
+            utils.save_arc(final_architecture, save_path)
+            print()
 
 
 

@@ -6,7 +6,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 
-import engine.ops as ops
+import ops as ops
 from nni.retiarii.nn.pytorch import LayerChoice, InputChoice
 
 class AuxiliaryHead(nn.Module):
@@ -161,9 +161,7 @@ class CNN(nn.Module):
 # ===============================================================================================
 # ===============================================================================================
                 
-P_MIN = 0
-P_MAX = 4.1
-def p():
+def p(P_MIN, P_MAX):
     return torch.rand(1).item() * (P_MAX - P_MIN) + P_MIN
 
 
@@ -175,80 +173,80 @@ from torch.distributions import RelaxedOneHotCategorical
 import logging
 from nni.retiarii.oneshot.pytorch.utils import AverageMeterGroup, replace_layer_choice, replace_input_choice, to_device
 _logger = logging.getLogger(__name__)
-import engine.utils as utils
+import utils as utils
 import numpy as np
 
 import torch.nn.init as init
 
-class PWNet(nn.Module):
-    def __init__(self, size, kernel_num,  init_ = 'random'):    
-        nn.Module.__init__(self)
+# class PWNet(nn.Module):
+#     def __init__(self, size, kernel_num,  init_ = 'random'):    
+#         nn.Module.__init__(self)
         
-        if not isinstance(size, tuple): # check if size is 1d
-            size = (size,)
+#         if not isinstance(size, tuple): # check if size is 1d
+#             size = (size,)
             
-        self.size = size
-        self.kernel_num = kernel_num
+#         self.size = size
+#         self.kernel_num = kernel_num
                
-        total_size = [kernel_num] + list(self.size) # [kenrel_num x param_size]
+#         total_size = [kernel_num] + list(self.size) # [kenrel_num x param_size]
 
-        self.const = nn.Parameter(torch.randn(total_size, dtype=torch.float32))
-        if init_ == 'random':
-            for i in range(kernel_num):
-                if len(self.size) > 1:
-                    init.kaiming_uniform_(self.const.data[i], a=np.sqrt(5))
-                else:
+#         self.const = nn.Parameter(torch.randn(total_size, dtype=torch.float32))
+#         if init_ == 'random':
+#             for i in range(kernel_num):
+#                 if len(self.size) > 1:
+#                     init.kaiming_uniform_(self.const.data[i], a=np.sqrt(5))
+#                 else:
                 
-                    self.const.data[i]*=0
-                    self.const.data[i]+=torch.randn(size)
-        else:
-            self.const.data *=0
-            self.const.data += init_
+#                     self.const.data[i]*=0
+#                     self.const.data[i]+=torch.randn(size)
+#         else:
+#             self.const.data *=0
+#             self.const.data += init_
         
-        self.pivots = nn.Parameter(torch.tensor(np.linspace(P_MIN + 0.1, P_MAX - 0.1, kernel_num - 2)), requires_grad=True)
+#         self.pivots = nn.Parameter(torch.tensor(np.linspace(P_MIN + 0.1, P_MAX - 0.1, kernel_num - 2)), requires_grad=True)
         
             
-    def forward(self, lam):           
-        # lam_ = lam * 0.99999
-        if lam < self.pivots[0]:
-            dist = (self.pivots[0] - lam) / (self.pivots[0] - P_MIN)
-            res = self.const[0] * (dist) + (1.0 - dist) * self.const[1]
-        elif lam > self.pivots[-1]:
-            dist = (P_MAX - lam) / (P_MAX - self.pivots[-1])
-            res = self.const[-2] * (dist) + (1.0 - dist) * self.const[-1]
-        else:
-            right = 0
-            while self.pivots[right] < lam:
-                right += 1
-            left = right - 1
+#     def forward(self, lam):           
+#         # lam_ = lam * 0.99999
+#         if lam < self.pivots[0]:
+#             dist = (self.pivots[0] - lam) / (self.pivots[0] - P_MIN)
+#             res = self.const[0] * (dist) + (1.0 - dist) * self.const[1]
+#         elif lam > self.pivots[-1]:
+#             dist = (P_MAX - lam) / (P_MAX - self.pivots[-1])
+#             res = self.const[-2] * (dist) + (1.0 - dist) * self.const[-1]
+#         else:
+#             right = 0
+#             while self.pivots[right] < lam:
+#                 right += 1
+#             left = right - 1
 
-            dist = (self.pivots[right] - lam) / (self.pivots[right] - self.pivots[left])
-            res = self.const[left] * (dist) + (1.0 - dist) * self.const[right]
-        return res
+#             dist = (self.pivots[right] - lam) / (self.pivots[right] - self.pivots[left])
+#             res = self.const[left] * (dist) + (1.0 - dist) * self.const[right]
+#         return res
 
-class Linear(nn.Module):
-    def __init__(self, nas_modules):    
-        nn.Module.__init__(self)
+# class Linear(nn.Module):
+#     def __init__(self, nas_modules):    
+#         nn.Module.__init__(self)
         
-        self.names = []
+#         self.names = []
 
-        consts = []
+#         consts = []
 
-        for name, module in nas_modules:
-            self.names.append(name)
-            size = (module.alpha.size()[0], )
-            total_size = [2] + list(size)
-            new_param = torch.randn(total_size)
-            consts.append(new_param)
-        self.consts = nn.ParameterList(consts)
+#         for name, module in nas_modules:
+#             self.names.append(name)
+#             size = (module.alpha.size()[0], )
+#             total_size = [2] + list(size)
+#             new_param = torch.randn(total_size)
+#             consts.append(new_param)
+#         self.consts = nn.ParameterList(consts)
             
-            # self.net_modules.append((name, new_param))
+#             # self.net_modules.append((name, new_param))
             
-    def forward(self, lam):
-        ret = {}
-        for name, const in zip(self.names, self.consts):
-            ret.update({name : const[0] * lam + const[1]})
-        return ret
+#     def forward(self, lam):
+#         ret = {}
+#         for name, const in zip(self.names, self.consts):
+#             ret.update({name : const[0] * lam + const[1]})
+#         return ret
 
 class Alpha(nn.Module):
     def __init__(self, nas_modules, device):    
@@ -271,13 +269,15 @@ class Alpha(nn.Module):
         return ret
 
 class PWLinear(nn.Module):
-    def __init__(self, nas_modules, N, device):    
+    def __init__(self, nas_modules, N, device, P_MIN, P_MAX):    
         nn.Module.__init__(self)
         self.nas_modules = nas_modules
         self.N = N
         self.device = device
+        self.P_MIN = P_MIN
+        self.P_MAX = P_MAX
 
-        self.pivots = torch.linspace(P_MIN + 1 / N, P_MAX - 1 / N, N - 2)
+        self.pivots = torch.linspace(self.P_MIN + 1 / N, self.P_MAX - 1 / N, N - 2)
 
         self.alphas = nn.ModuleList([Alpha(nas_modules, device)])  # 0
         for _ in self.pivots:
@@ -294,9 +294,9 @@ class PWLinear(nn.Module):
         left_index = right_index - 1
 
         ret = {}
-        left_pivot = (P_MIN if left_index <= -1 else self.pivots[left_index])
+        left_pivot = (self.P_MIN if left_index <= -1 else self.pivots[left_index])
         left = self.alphas[left_index + 1]() # left_params
-        right_pivot = (P_MAX if right_index >= self.N - 2 else self.pivots[right_index])
+        right_pivot = (self.P_MAX if right_index >= self.N - 2 else self.pivots[right_index])
         right = self.alphas[right_index + 1]() # right_params
 
         assert right_pivot >= lam
@@ -305,20 +305,71 @@ class PWLinear(nn.Module):
         for name, _ in self.nas_modules:
             k_left = torch.tensor((lam - left_pivot) / (right_pivot - left_pivot), device=self.device)
             k_right = torch.tensor(1 - (lam - left_pivot) / (right_pivot - left_pivot), device=self.device)
-            ret.update({name : k_left.cuda() * left[name] + k_right.cuda() * right[name] })
+            ret.update({ name : k_left * left[name] + k_right.to(self.device) * right[name] })
         return ret
 
-def JSD(net_1_logits, net_2_logits):
-    from torch.functional import F
-    net_1_probs = F.softmax(net_1_logits, dim=0)
-    net_2_probs = F.softmax(net_2_logits, dim=0)
+# def JSD(net_1_logits, net_2_logits):
+#     from torch.functional import F
+#     net_1_probs = F.softmax(net_1_logits, dim=0)
+#     net_2_probs = F.softmax(net_2_logits, dim=0)
     
-    total_m = 0.5 * (net_1_probs + net_2_probs)
+#     total_m = 0.5 * (net_1_probs + net_2_probs)
     
-    loss = 0.0
-    loss += F.kl_div(F.log_softmax(net_1_logits, dim=0), total_m, reduction="batchmean") 
-    loss += F.kl_div(F.log_softmax(net_2_logits, dim=0), total_m, reduction="batchmean") 
-    return (0.5 * loss)
+#     loss = 0.0
+#     loss += F.kl_div(F.log_softmax(net_1_logits, dim=0), total_m, reduction="batchmean") 
+#     loss += F.kl_div(F.log_softmax(net_2_logits, dim=0), total_m, reduction="batchmean") 
+#     return (0.5 * loss)
+
+class DartsLayerChoice(nn.Module):
+    def __init__(self, layer_choice):
+        super(DartsLayerChoice, self).__init__()
+        self.name = layer_choice.label
+        self.op_choices = nn.ModuleDict(OrderedDict([(name, layer_choice[name]) for name in layer_choice.names]))
+        self.alpha = nn.Parameter(torch.randn(len(self.op_choices)) * 1e-3)
+
+    def forward(self, *args, **kwargs):
+        op_results = torch.stack([op(*args, **kwargs) for op in self.op_choices.values()])
+        alpha_shape = [-1] + [1] * (len(op_results.size()) - 1)
+        return torch.sum(op_results * F.softmax(self.alpha, -1).view(*alpha_shape), 0)
+
+    def parameters(self):
+        for _, p in self.named_parameters():
+            yield p
+
+    def named_parameters(self):
+        for name, p in super(DartsLayerChoice, self).named_parameters():
+            if name == 'alpha':
+                continue
+            yield name, p
+
+    def export(self):
+        return list(self.op_choices.keys())[torch.argmax(self.alpha).item()]
+
+
+class DartsInputChoice(nn.Module):
+    def __init__(self, input_choice):
+        super(DartsInputChoice, self).__init__()
+        self.name = input_choice.label
+        self.alpha = nn.Parameter(torch.randn(input_choice.n_candidates) * 1e-3)
+        self.n_chosen = input_choice.n_chosen or 1
+
+    def forward(self, inputs):
+        inputs = torch.stack(inputs)
+        alpha_shape = [-1] + [1] * (len(inputs.size()) - 1)
+        return torch.sum(inputs * F.softmax(self.alpha, -1).view(*alpha_shape), 0)
+
+    def parameters(self):
+        for _, p in self.named_parameters():
+            yield p
+
+    def named_parameters(self):
+        for name, p in super(DartsInputChoice, self).named_parameters():
+            if name == 'alpha':
+                continue
+            yield name, p
+
+    def export(self):
+        return torch.argsort(-self.alpha).cpu().numpy().tolist()[:self.n_chosen]
 
 class MyDartsLayerChoice(nn.Module):
     def __init__(self, layer_choice):
@@ -371,24 +422,25 @@ class MyDartsInputChoice(nn.Module):
     def export(self):
         return torch.argsort(-self.alpha).cpu().numpy().tolist()[:self.n_chosen]
 
-class MyDartsTrainer(DartsTrainer):
-    def __init__(self, model, loss, metrics, optimizer,
-                 num_epochs, dataset, grad_clip=5.,
+class EdgeNES(DartsTrainer):
+    def __init__(self, model, metrics,
+                 num_epochs, regime, dataset, grad_clip=5.,
                  learning_rate=2.5E-3, batch_size=64, workers=4,
                  device=None, log_frequency=None,
                  arc_learning_rate=3.0E-4, unrolled=False,
-                 weight=1e3, 
-                 lambd=0, 
-                 tau=0.9, 
-                 t_alpha=0.3, t_beta=0.4,
-                 optimalPath='checkpoints/fashionMNIST/optimal/arc.json', 
-                 train_as_optimal=False,
+                 weight_func=None,
+                 lambd=None, 
+                 tau=None,
+                 t_func=None,
+                 optimal_arc_dict=None,
                  n_chosen=2,
-                 turn_on_hypernetwork=True,
+                 lambd_min=None, lambd_max=None
                  ):
+        assert regime in ['optimal', 'hypernetwork', 'edges'], 'Regime of model shold be optimal or hypernetwork or edges'
 
         self.model = model
-        self.loss = loss
+        self.regime = regime
+        self.loss = nn.CrossEntropyLoss()
         self.metrics = metrics
         self.num_epochs = num_epochs
         self.dataset = dataset
@@ -397,108 +449,112 @@ class MyDartsTrainer(DartsTrainer):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device
         self.log_frequency = log_frequency
         self.model.to(self.device)
-
-        self.nas_modules = []
-        replace_layer_choice(self.model, MyDartsLayerChoice, self.nas_modules)
-        replace_input_choice(self.model, MyDartsInputChoice, self.nas_modules)
-        for _, module in self.nas_modules:
-            module.to(self.device)
-
-        self.model_optim = optimizer
-        # use the same architecture weight for modules with duplicated names
-        ctrl_params = {}
-        for _, m in self.nas_modules:
-            if m.name in ctrl_params:
-                assert m.alpha.size() == ctrl_params[m.name].size(), 'Size of parameters with the same label should be same.'
-                m.alpha = ctrl_params[m.name]
-            else:
-                ctrl_params[m.name] = m.alpha
-        self.ctrl_optim = torch.optim.Adam(list(ctrl_params.values()), arc_learning_rate, betas=(0.5, 0.999),
-                                           weight_decay=1.0E-3)
         self.unrolled = unrolled
-        self.grad_clip = 5.
-
-        self._init_dataloader()
-    
-
-        self.weight = weight
-        self.lambd = lambd
-        self.tau = tau
-        self.t_alpha = t_alpha
-        self.t_beta = t_beta
-        self.train_as_optimal = train_as_optimal
+        self.grad_clip = grad_clip
         self.n_chosen = n_chosen
 
-        if train_as_optimal:
-            return
+        # General setup
+        self._init_dataloader()
+        optim = torch.optim.SGD(model.parameters(), learning_rate, momentum=0.9, weight_decay=3.0E-4)
+        self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim, num_epochs, eta_min=0.001)
+        self.model_optim = optim
+        
+        # NAS modules
+        if self.regime in ['edges', 'optimal']:
+            self.nas_modules = []
+            replace_layer_choice(self.model, DartsLayerChoice, self.nas_modules)
+            replace_input_choice(self.model, DartsInputChoice, self.nas_modules)
+            for _, module in self.nas_modules:
+                module.to(self.device)
+        elif self.regime == 'hypernetwork':
+            self.nas_modules = []
+            replace_layer_choice(self.model, MyDartsLayerChoice, self.nas_modules)
+            replace_input_choice(self.model, MyDartsInputChoice, self.nas_modules)
+            for _, module in self.nas_modules:
+                module.to(self.device)
 
-        self.turn_on_hypernetwork = turn_on_hypernetwork
-        if turn_on_hypernetwork:
+        # Arcitecture optimizer
+        if self.regime in ['edges', 'optimal']:
+            ctrl_params = {}
+            for _, m in self.nas_modules:
+                if m.name in ctrl_params:
+                    assert m.alpha.size() == ctrl_params[m.name].size(), 'Size of parameters with the same label should be same.'
+                    m.alpha = ctrl_params[m.name]
+                else:
+                    ctrl_params[m.name] = m.alpha
+            self.ctrl_optim = torch.optim.Adam(list(ctrl_params.values()), arc_learning_rate, betas=(0.5, 0.999),
+                                            weight_decay=1.0E-3)
+        elif self.regime == 'hypernetwork':
             self.kernel_num = 8
             self.init_network()
             self.ctrl_optim = torch.optim.Adam(self.hypernetwork.parameters(), arc_learning_rate, betas=(0.5, 0.999),
                                     weight_decay=1e-3)
-        
-        
+            self.lambd_min = lambd_min
+            self.lambd_max = lambd_max
+
+        # Regularizer params
+        if self.regime in ['edges', 'hypernetwork']:
+            self.weight_func = weight_func
+            self.lambd = lambd
+            self.tau = tau
+            self.t_func = t_func
+
+            self.optimal_arc_dict = optimal_arc_dict
+            self.set_numerical_optimal_arc()
+            
+
+    def set_numerical_optimal_arc(self):
         operations = { "maxpool": 0, "avgpool": 1, "skipconnect": 2, "sepconv3x3": 3,
                       "sepconv5x5": 4, "dilconv3x3" : 5, "dilconv5x5" : 6 } # индексы операций по названиям (в соответствии с nas_modules)
-        O = len(operations) # кол-во операций
+        O = len(operations)
 
-        self.optimal_arc = {} # архитектура в виде векторов, где 1 стоят там, где есть ребро
-
-        with open(optimalPath) as f:
-            self.checkpoint_optimum = json.load(f) # оптимальная архитектура в виде словаря
-
+        self.optimal_arc_numerical = {} # архитектура в виде векторов, где 1 стоят там, где есть ребро
         for name, _ in self.nas_modules:
             if name[-6:] != 'switch': # если модуль не reduce_n#_switch
-                operation = self.checkpoint_optimum[name] # имя оптимальной операции
+                operation = self.optimal_arc_dict[name] # имя оптимальной операции
                 index = operations[operation] # индекс оптимальной операции
                 t = torch.zeros(O, device=self.device)
                 t[index] = 1
                 t = t * self.tau + 1 / O * (1 - self.tau)
-                self.optimal_arc[name] = t
+                self.optimal_arc_numerical[name] = t
             elif name[-6:] == 'switch':
-                parents = self.checkpoint_optimum[name]
+                parents = self.optimal_arc_dict[name]
                 node = int(name[-8])
                 t = torch.zeros(node)
                 t[parents] = 1
-                self.optimal_arc[node] = t # 1 стоят там, где ребро есть, 0 там, где ребра нет
-
+                self.optimal_arc_numerical[node] = t # 1 стоят там, где ребро есть, 0 там, где ребра нет
 
     def init_network(self):
-        self.hypernetwork = PWLinear(self.nas_modules, self.kernel_num, self.device)
+        self.hypernetwork = PWLinear(self.nas_modules, self.kernel_num, self.device, self.p_min, self.p_max)
         self.hypernetwork.to(self.device)
 
-        # print([p for p in self.hypernetwork.parameters()])
-        
+    # def JSD(self):
+    #     '''
+    #     Подсчет дивергенции между своей и оптимальной архитектурой
+    #     '''
+    #     res = 0.0
+    #     count = 0
+    #     for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
+    #         if name in self.optimal.keys():
+    #             res += JSD(module.alpha, torch.log(self.optimal[name]))
+    #             count += 1
+    #     return res / count
 
-    def JSD(self):
-        '''
-        Подсчет дивергенции между своей и оптимальной архитектурой
-        '''
-        res = 0.0
-        count = 0
-        for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
-            if name in self.optimal.keys():
-                res += JSD(module.alpha, torch.log(self.optimal[name]))
-                count += 1
-        return res / count
-
-    def edgeComparisonOldVersion(self):
-        '''
-        Регуляризатор на основе количество общих  ребер
-        '''
-        count = 0
-        sum = 0
-        for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
-            if name in self.optimal.keys():
-                print(F.softmax(module.alpha, dim=0), type(F.softmax(module.alpha, dim=0)))
-                alpha = F.softmax(module.alpha, dim=0)
-                alpha0 = RelaxedOneHotCategorical(probs=self.optimal[name], temperature=self.t).rsample().t()
-                print(torch.dot(alpha, alpha0))
-                sum += torch.dot(alpha, alpha0)
-                count += 1
-        return sum / count
+    # def edgeComparisonOldVersion(self):
+    #     '''
+    #     Регуляризатор на основе количество общих  ребер
+    #     '''
+    #     count = 0
+    #     sum = 0
+    #     for name, module in self.nas_modules: # суммируем диаергенцию по всем ребрам
+    #         if name in self.optimal.keys():
+    #             print(F.softmax(module.alpha, dim=0), type(F.softmax(module.alpha, dim=0)))
+    #             alpha = F.softmax(module.alpha, dim=0)
+    #             alpha0 = RelaxedOneHotCategorical(probs=self.optimal[name], temperature=self.t).rsample().t()
+    #             print(torch.dot(alpha, alpha0))
+    #             sum += torch.dot(alpha, alpha0)
+    #             count += 1
+    #     return sum / count
     
     def edgeCount(self):
         '''
@@ -514,53 +570,50 @@ class MyDartsTrainer(DartsTrainer):
         for name, module in self.nas_modules: # разность по ребрам
             if name[-6:] != 'switch':
                 alpha = RelaxedOneHotCategorical(logits=module.alpha, temperature=self.t_alpha).rsample().t()
-                alpha_opt = self.optimal_arc[name]
+                alpha_opt = self.optimal_arc_numerical[name]
                 # alpha0 = RelaxedOneHotCategorical(probs=self.optimal[name], temperature=self.t).rsample().t()
                 p, n = int(name[-1]), int(name[-4]) # номер parent и node
-                sum += torch.dot(alpha, alpha_opt) * beta[n][p] * self.optimal_arc[n][p]
+                sum += torch.dot(alpha, alpha_opt) * beta[n][p] * self.optimal_arc_numerical[n][p]
         return sum
 
     def _logits_and_loss(self, X, y, lambd=None):
         logits = self.model(X)
-        if self.train_as_optimal or lambd is None:
+        if self.regime == 'optimal' or lambd is None:
             loss = self.loss(logits, y)
         else:
             loss = self.loss(logits, y) + self.weight * (lambd - self.edgeCount()) ** 2
-        # self.decay * self.JSD() # обращаем внимание, что регуляризатор не влияет на первый уровень оптимизации
         return logits, loss
 
     def common_edges_with_opt(self):
-        optimal_arc = self.checkpoint_optimum
+        optimal_arc = self.optimal_arc_dict
         arc = self.export()
         return utils.common_edges(arc, optimal_arc)
 
     def set_alpha(self, architecture):
         for name, module in self.nas_modules:
             module.alpha = architecture[name]
-            # print(i, name, module.alpha.size()[0], param_size)
 
     def get_arch(self, lam):
         architecture = self.hypernetwork(lam)
         self.set_alpha(architecture)
-        # for n, m in self.nas_modules:
-        #     print(n, m.alpha)
-
         return self.export()
 
-    def _train_one_epoch(self, epoch, writer):
+    def _train_one_epoch(self, epoch, writer=None):
         self.model.train()
         meters = AverageMeterGroup()
         for step, ((trn_X, trn_y), (val_X, val_y)) in enumerate(zip(self.train_loader, self.valid_loader)):
-            if self.turn_on_hypernetwork:
-                lambd = p()
-            else:
+            if self.regime == 'hypernetwork':
+                lambd = p(self.lambd_min, self.lambd_max)
+            elif self.regime == 'edges':
                 lambd = self.lambd
+            elif self.regime == 'optimal':
+                lambd = None
 
             trn_X, trn_y = trn_X.to(self.device), trn_y.to(self.device)
             val_X, val_y = val_X.to(self.device), val_y.to(self.device)
 
             # set architecture from hypernet
-            if self.turn_on_hypernetwork:
+            if self.regime == 'hypernetwork':
                 architecture = self.hypernetwork(lambd)
                 self.set_alpha(architecture)
             
@@ -575,7 +628,7 @@ class MyDartsTrainer(DartsTrainer):
             self.ctrl_optim.step()
 
             # set architecture from hypernet
-            if self.turn_on_hypernetwork:
+            if self.regime == 'hypernetwork':
                 architecture = self.hypernetwork(lambd)
                 self.set_alpha(architecture)
 
@@ -595,18 +648,16 @@ class MyDartsTrainer(DartsTrainer):
                 print(f'Epoch [{epoch + 1}/{self.num_epochs}] Step [{step + 1}/{len(self.train_loader)}]  {meters}')
                 if writer is not None:
                     writer.add('loss', epoch * len(self.train_loader) + step, loss.item())
-                    writer.add('edges', epoch * len(self.train_loader) + step, self.common_edges_with_opt())
+                    # writer.add('edges', epoch * len(self.train_loader) + step, self.common_edges_with_opt())
                     writer.add('accuracy', epoch * len(self.train_loader) + step, meters['acc1'].val)
         return meters
                 
-    def fit(self, writer=None, warmup_weight=None, warmup_t=None):
+    def fit(self):
         for i in range(self.num_epochs):
-            if warmup_weight is not None:
-                self.weight = warmup_weight(i, self.num_epochs)
-            if warmup_t is not None:
-                self.t_alpha = warmup_t(i, self.num_epochs)
-                self.t_beta = warmup_t(i, self.num_epochs)
-            if writer is not None:
-                writer.add('weight', i, self.weight)
-                writer.add('tempreture', i, self.t_beta)
-            self._train_one_epoch(i, writer)
+            self.weight = self.weight_func(i, self.num_epochs)
+            self.t_alpha = self.t_func(i, self.num_epochs)
+            self.t_beta = self.t_func(i, self.num_epochs)
+            # if writer is not None:
+            #     writer.add('weight', i, self.weight)
+            #     writer.add('tempreture', i, self.t_beta)
+            self._train_one_epoch(i)
