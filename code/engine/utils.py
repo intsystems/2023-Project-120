@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 from model import CNN
 import os
 import json
+import yaml
 
 def make_dir(new_folder_path):
     if not os.path.exists(new_folder_path):
@@ -48,6 +49,16 @@ def warmup_t(epoch, epochs, MIN=0.01, MAX=0.5):
 def save_arc(arcitecture, file_path):
     with open(file_path, "w+") as file:
         json.dump(arcitecture, file, indent=4)
+
+def get_config(path):
+    print(f'Reading {path}...')
+    with open(path, "r") as file:
+        args = yaml.load(file, Loader=yaml.FullLoader)
+    print('Configuration for searching:')
+    for key, value in args.items():
+        print(f'{key} : {value}')
+    print()
+    return args
 
 class Writer:
     def __init__(self):

@@ -18,29 +18,22 @@ import numpy as np
 
 logger = logging.getLogger('nni')
 
-
 def get_optimal_arc(args):
     path = utils.get_save_path(args)
     save_path = path + '/' + 'optimal/' + 'arc_' + str(args['OPTIMAL_NUMBER']) + '.json'
-    print('Loading optimal architecture from ' + save_path + '...')
+    print('Reading optimal architecture from ' + save_path + '...')
     with open(save_path) as f:
         optimal_arc_dict = json.load(f)
     print('Optimal arcitecture:', optimal_arc_dict)
     print()
     return optimal_arc_dict
 
-def get_config():
-    print('Reading configs/search.yaml...')
-    with open("configs/search.yaml", "r") as file:
-        args = yaml.load(file, Loader=yaml.FullLoader)
-    print('Configuration for searching:')
-    for key, value in args.items():
-        print(f'{key} : {value}')
-    print()
-    return args
+def get_random_operation():
+    operations = [ "maxpool", "avgpool", "skipconnect", "sepconv3x3", "sepconv5x5", "dilconv3x3", "dilconv5x5"]
+    return np.random.choice(operations)
 
 if __name__ == "__main__":
-    args = get_config()
+    args = utils.get_config('configs/search.yaml')
 
     print('Loading dataset...')
     dataset_train, dataset_valid = datasets.get_dataset(args['DATASET'])
@@ -81,17 +74,34 @@ if __name__ == "__main__":
             final_architecture = trainer.export()
             print('Final architecture:', final_architecture)
             number = max([-1] + [int(file[4:file.find('.json')]) for file in os.listdir(path + '/optimal')]) + 1
-            print('Saving to ', path + f'/optimal/arc_{number}.json...')
-            json.dump(final_architecture, open(path + f'/optimal/arc_{number}.json', 'w+'))
+            save_path = path + f'/optimal/arc_{number}.json...'
+            print('Saving to ' + save_path + '...')
+            utils.save_arc(final_architecture, save_path)
             print()
             
 
     if args['REGIME'] == 'random':
         optimal_arc_dict = get_optimal_arc(args)
+        swithes = []
         for lambd in args['COMMON_EDGES']:
-            edges_to_change = np.random.choice(8, 4 - lambd, replace=False)
+            new_arc_dict = optimal_arc_dict.copy()
+            print(f"Start randoming architecture for common edges = {lambd}...")
+            edges_to_change = np.random.choice(4, 4 - lambd, replace=False)
             for edge in edges_to_change:
-                pass
+                node = edge + 2
+                new_parent = np.random.randint(0, node)
+                while new_parent in optimal_arc_dict[f'reduce_n{node}_switch']:
+                    new_parent = np.random.randint(0, node)
+                new_arc_dict[f'reduce_n{node}_switch'] = [new_parent]
+                new_arc_dict[f"reduce_n{node}_p{new_parent}"] = get_random_operation()
+            print('Final architecture:', new_arc_dict)
+            number = max([-1] + [int(file[4:file.find('.json')]) for file in os.listdir(path + f'/random/amount={lambd}')]) + 1
+            save_path = path + f'/random/amount={lambd}/arc_{number}.json'
+            print('Saving to ', save_path + '...')
+            utils.save_arc(new_arc_dict, save_path)
+            print(utils.common_edges(optimal_arc_dict, new_arc_dict))
+            print()
+        
 
 
     if args['REGIME'] == 'edges':

@@ -654,9 +654,10 @@ class EdgeNES(DartsTrainer):
                 
     def fit(self):
         for i in range(self.num_epochs):
-            self.weight = self.weight_func(i, self.num_epochs)
-            self.t_alpha = self.t_func(i, self.num_epochs)
-            self.t_beta = self.t_func(i, self.num_epochs)
+            if self.regime in ['edges', 'hypernet']:
+                self.weight = self.weight_func(i, self.num_epochs)
+                self.t_alpha = self.t_func(i, self.num_epochs)
+                self.t_beta = self.t_func(i, self.num_epochs)
             # if writer is not None:
             #     writer.add('weight', i, self.weight)
             #     writer.add('tempreture', i, self.t_beta)
