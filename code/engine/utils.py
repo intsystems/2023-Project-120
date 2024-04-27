@@ -60,6 +60,22 @@ def get_config(path):
     print()
     return args
 
+def make_dirs(args):
+    print('Making dirs...')
+    path = get_save_path(args)
+    make_dir(args['SAVE_FOLDER'])
+    make_dir(path)
+    make_dir(path + '/optimal')
+    make_dir(path + '/edges')
+    make_dir(path + '/random')
+    if args['REGIME'] == 'edges':
+        for lambd in args['LAMBDAS']:
+            make_dir(path + f'/edges/lam={lambd}')
+    if args['REGIME'] == 'random':
+        for lambd in args['COMMON_EDGES']:
+            make_dir(path + f'/random/amount={lambd}')
+    print()
+
 class Writer:
     def __init__(self):
         self.data = {}
