@@ -145,5 +145,5 @@ slides/slides.nav
 slides/slides.snm
 
 code/data
-code/engine/runs
+code/runs
 code/checkpoints
