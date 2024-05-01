@@ -428,15 +428,16 @@ class EdgeNES(DartsTrainer):
                  learning_rate=2.5E-3, batch_size=64, workers=4,
                  device=None, log_frequency=None,
                  arc_learning_rate=3.0E-4, unrolled=False,
-                 weight_func=None,
-                 lambd=None, 
+                 weight_start=None, weight_end=None,
+                 t_start=None, t_end=None,
+                 lambd=None,
+                 p_min=None, p_max=None,
+                 kernel_num=None,
                  tau=None,
-                 t_func=None,
                  optimal_arc_dict=None,
                  n_chosen=2,
-                 lambd_min=None, lambd_max=None
                  ):
-        assert regime in ['optimal', 'hypernetwork', 'edges'], 'Regime of model shold be optimal or hypernetwork or edges'
+        assert regime in ['optimal', 'hypernet', 'edges'], 'Regime of model shold be optimal or hypernet or edges'
 
         self.model = model
         self.regime = regime
@@ -466,7 +467,7 @@ class EdgeNES(DartsTrainer):
             replace_input_choice(self.model, DartsInputChoice, self.nas_modules)
             for _, module in self.nas_modules:
                 module.to(self.device)
-        elif self.regime == 'hypernetwork':
+        elif self.regime == 'hypernet':
             self.nas_modules = []
             replace_layer_choice(self.model, MyDartsLayerChoice, self.nas_modules)
             replace_input_choice(self.model, MyDartsInputChoice, self.nas_modules)
@@ -484,24 +485,25 @@ class EdgeNES(DartsTrainer):
                     ctrl_params[m.name] = m.alpha
             self.ctrl_optim = torch.optim.Adam(list(ctrl_params.values()), arc_learning_rate, betas=(0.5, 0.999),
                                             weight_decay=1.0E-3)
-        elif self.regime == 'hypernetwork':
-            self.kernel_num = 8
+        elif self.regime == 'hypernet':
             self.init_network()
             self.ctrl_optim = torch.optim.Adam(self.hypernetwork.parameters(), arc_learning_rate, betas=(0.5, 0.999),
                                     weight_decay=1e-3)
-            self.lambd_min = lambd_min
-            self.lambd_max = lambd_max
+            # hypernetwork params
+            self.p_min = p_min
+            self.p_max = p_max
+            self.kernel_num = kernel_num
 
         # Regularizer params
-        if self.regime in ['edges', 'hypernetwork']:
-            self.weight_func = weight_func
-            self.lambd = lambd
+        if self.regime in ['edges', 'hypernet']:
+            self.weight_start, self.weight_end = weight_start, weight_end
+            self.t_start, self.t_end = t_start, t_end
             self.tau = tau
-            self.t_func = t_func
-
             self.optimal_arc_dict = optimal_arc_dict
             self.set_numerical_optimal_arc()
-            
+
+        if self.regime == 'edges':
+            self.lambd = lambd
 
     def set_numerical_optimal_arc(self):
         operations = { "maxpool": 0, "avgpool": 1, "skipconnect": 2, "sepconv3x3": 3,
@@ -602,8 +604,8 @@ class EdgeNES(DartsTrainer):
         self.model.train()
         meters = AverageMeterGroup()
         for step, ((trn_X, trn_y), (val_X, val_y)) in enumerate(zip(self.train_loader, self.valid_loader)):
-            if self.regime == 'hypernetwork':
-                lambd = p(self.lambd_min, self.lambd_max)
+            if self.regime == 'hypernet':
+                lambd = p(self.p_min, self.p_max)
             elif self.regime == 'edges':
                 lambd = self.lambd
             elif self.regime == 'optimal':
@@ -613,7 +615,7 @@ class EdgeNES(DartsTrainer):
             val_X, val_y = val_X.to(self.device), val_y.to(self.device)
 
             # set architecture from hypernet
-            if self.regime == 'hypernetwork':
+            if self.regime == 'hypernet':
                 architecture = self.hypernetwork(lambd)
                 self.set_alpha(architecture)
             
@@ -628,7 +630,7 @@ class EdgeNES(DartsTrainer):
             self.ctrl_optim.step()
 
             # set architecture from hypernet
-            if self.regime == 'hypernetwork':
+            if self.regime == 'hypernet':
                 architecture = self.hypernetwork(lambd)
                 self.set_alpha(architecture)
 
@@ -651,13 +653,19 @@ class EdgeNES(DartsTrainer):
                     # writer.add('edges', epoch * len(self.train_loader) + step, self.common_edges_with_opt())
                     writer.add('accuracy', epoch * len(self.train_loader) + step, meters['acc1'].val)
         return meters
+    
+    def warmup_weight(self, epoch, epochs):
+        return self.weight_start+ (epoch / epochs) * (self.weight_end - self.weight_start)
+
+    def warmup_t(self, epoch, epochs):
+        return self.t_start + (epoch / epochs) * (self.t_end - self.t_start)
                 
     def fit(self):
         for i in range(self.num_epochs):
             if self.regime in ['edges', 'hypernet']:
-                self.weight = self.weight_func(i, self.num_epochs)
-                self.t_alpha = self.t_func(i, self.num_epochs)
-                self.t_beta = self.t_func(i, self.num_epochs)
+                self.weight = self.warmup_weight(i, self.num_epochs)
+                self.t_alpha = self.warmup_t(i, self.num_epochs)
+                self.t_beta = self.warmup_t(i, self.num_epochs)
             # if writer is not None:
             #     writer.add('weight', i, self.weight)
             #     writer.add('tempreture', i, self.t_beta)

@@ -40,12 +40,6 @@ def get_model(args):
 def get_save_path(args):
     return args['SAVE_FOLDER'] + '/' + args['DATASET']
 
-def warmup_weight(epoch, epochs, MIN=0.1, MAX=2):
-    return MIN + (epoch / epochs) * (MAX - MIN)
-
-def warmup_t(epoch, epochs, MIN=0.01, MAX=0.5):
-    return MIN + (epoch / epochs) * (MAX - MIN)
-
 def save_arc(arcitecture, file_path):
     with open(file_path, "w+") as file:
         json.dump(arcitecture, file, indent=4)
