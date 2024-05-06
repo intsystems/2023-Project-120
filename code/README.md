@@ -15,15 +15,15 @@ These functions are controlled via config files, located in `./configs`. Code sa
 ### Launch code
 
 - For searching
-Edit ./configs/search.yaml for your purposes
+Edit `./configs/search.yaml` for your purposes
     - `chmod +x run_search.sh`
     - `./run_search.sh`
 - For retrain
-Edit ./configs/retrain.yaml for your purposes
+Edit `./configs/retrain.yaml` for your purposes
     - `chmod +x run_retrain.sh`
     - `./run_retrain.sh`
 - For inference
-Edit ./configs/inference.yaml for your purposes
+Edit `./configs/inference.yaml` for your purposes
     - `chmod +x run_inference.sh`
     - `./run_inference.sh`
 
