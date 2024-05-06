@@ -1,16 +1,14 @@
 ### Run code
 
-To run a search phase, type the following, where "checkpoitns/decay" is existing folder
-```bash
-python search.py --decay=decay --save-folder=checkpoints/decay
-```
+The main three functions of the code are:
 
-To run a retrain, type the following, where "checkpoitns/decay" is existing folder with saved "arc.json" in it
-```bash
-python retrain.py --save-folder=checkpoints/decay --epochs=7
-```
+- __Search for architectures__: search architectures with one of the following methodologies:
+    - __Optimal__ - search architectures via vanilla DARTS.
+    - __Edges__ - search architectures with exploitation of a regularizer with fixed parameter $\lambda$.
+    - __Random__ - randomly change specified amount of edges in the basic architecture.
+    - __Hypernet__ - novel method that exploits hypernet and samples lambda on every iteration of optimization.
+- __Retrain architectures__: retrain weights of specified architecture starting from random initialisation.
+- __Inference models as ensemble__: choose models and aggregate their answers. Compute their performance as ensemble.
 
-To run inference, type the following a directory checkpoints should exist
-```bash
-python inference.py
-```
+These functions are controlled via config files, located in ./configs. Code saves architectures and models after searching and retraining in specified directory.
+
