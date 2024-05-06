@@ -1,0 +1,40 @@
+# Searching
+REGIME:             hypernet # random / optimal / hypernet / edges
+# For edges and hypernet
+WEIGHT_START:       0.3
+WEIGHT_END:         3
+T_START:            1
+T_END:              0.05
+TAU:                0.99
+OPTIMAL_NUMBER:     0 # in {SAVE_FOLDER}/{dataset}/optimal
+# For edges
+LAMBDAS:            [1, 2]
+# For hypernet
+KERNEL_NUM:         5
+HYPERNET_LAMBDAS:   [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]
+P_MIN:              0
+P_MAX:              4.2
+# For optimal
+OPTIMAL_AMOUNT:     1
+# For random
+COMMON_EDGES:       [0, 1, 2, 3]
+
+
+# Files
+SAVE_FOLDER:        checkpoints
+DATASET:            cifar100
+
+# Architecture
+N_CHOSEN:           1
+LAYERS:             1
+CHANNELS:           10
+UNROLLED:           False
+
+# Optimization
+EPOCHS:             1
+BATCH_SIZE:         64
+LOG_FREQUENCY:      50
+VISUALIZATION:      False
+LEARNING_RATE:      2.5e-3
+ARC_LEARNING_RATE:  3.0e-1
+

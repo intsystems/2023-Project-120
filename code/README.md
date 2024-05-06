@@ -1,4 +1,4 @@
-### Run basic code
+### Run code
 
 To run a search phase, type the following, where "checkpoitns/decay" is existing folder
 ```bash
