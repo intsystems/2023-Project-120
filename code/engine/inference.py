@@ -2,20 +2,15 @@
 # Licensed under the MIT license.
 
 import logging
-import time
-from argparse import ArgumentParser
 
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
-import engine.datasets as datasets
-import engine.utils as utils
-from model import CNN
+import datasets as datasets
+import utils as utils
 from nni.retiarii.oneshot.pytorch.utils import AverageMeter
 from nni.retiarii import fixed_arch
-from glob import glob
-import numpy as np
 
 logger = logging.getLogger('nni')
 
@@ -23,75 +18,101 @@ logger = logging.getLogger('nni')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 writer = SummaryWriter()
 
+def inference(models, valid_loader):
+    criterion = nn.CrossEntropyLoss()
+
+    top1 = AverageMeter("top1")
+    top5 = AverageMeter("top5")
+    losses = AverageMeter("losses")
+
+    # validation
+    softmax = nn.Softmax(dim=1)
+    for step, (X, y) in enumerate(valid_loader):
+            X, y = X.to(device, non_blocking=True), y.to(device, non_blocking=True)
+            bs = X.size(0)
+
+            probabilities = softmax(models[0](X))
+            for i in range(1, len(models)):
+                probabilities += softmax(models[i](X))
+            probabilities = probabilities / len(models)
+            loss = criterion(probabilities, y)
+
+            accuracy = utils.accuracy(probabilities, y, topk=(1, 5))
+            losses.update(loss.item(), bs)
+            top1.update(accuracy["acc1"], bs)
+            top5.update(accuracy["acc5"], bs)
+
+            if step % 10 == 0 or step == len(valid_loader) - 1:
+                logger.info(
+                    "Valid: Step {:03d}/{:03d} Loss {losses.avg:.3f} "
+                    "Prec@(1,5) ({top1.avg:.1%}, {top5.avg:.1%})".format(
+                        step, len(valid_loader) - 1, losses=losses,
+                        top1=top1, top5=top5))
+
+    logger.info("Final best Prec@1 = {:.4%}".format(top1.avg))
+    return top1.avg
 
 if __name__ == "__main__":
-    parser = ArgumentParser("darts")
-    parser.add_argument("--layers", default=2, type=int)
-    parser.add_argument("--batch-size", default=96, type=int)
-    parser.add_argument("--log-frequency", default=10, type=int)
-    parser.add_argument("--epochs", default=50, type=int)
-    parser.add_argument("--aux-weight", default=0.4, type=float)
-    parser.add_argument("--drop-path-prob", default=0.1, type=float)
-    parser.add_argument("--workers", default=4)
-    parser.add_argument("--grad-clip", default=5., type=float)
-    parser.add_argument("--checkpoints-folder", default="./checkpoints")
+    args = utils.get_config('configs/inference.yaml')
 
-    args = parser.parse_args()
-    dataset_train, dataset_valid = datasets.get_dataset("fashionmnist", cutout_length=16)
+    print('Loading dataset...')
+    dataset_train, dataset_valid = datasets.get_dataset(args['DATASET'])
+    print()
 
-    Lambdas = range(3, 42)
-    res_dict_accur = {}
-    for Lambda in Lambdas:
-        models = []
-        lambdas = np.random.choice(Lambda, size=3, replace=False) # выбранные lambda
-        print(Lambda)
-        for dir in glob(args.checkpoints_folder + "/*"):
-            if float(dir.split('\\')[-1]) in lambdas:
-            # if dir == "./checkpoints\\0":
-                print(dir)
-                with fixed_arch(dir + "/arc_cifar.json"):
-                    model = CNN(32, 1, 36, 10, args.layers, auxiliary=True)
-                model.eval()
-                model.to(device)
-                model.load_state_dict(torch.load(dir + "/mod_cifar.json"))
-                
-                models.append(model)
+    valid_loader = torch.utils.data.DataLoader(dataset_valid,
+                                                batch_size=args['BATCH_SIZE'],
+                                                shuffle=False,
+                                                num_workers=args['WORKERS'],
+                                                pin_memory=True)
 
-        valid_loader = torch.utils.data.DataLoader(dataset_valid,
-                                                    batch_size=args.batch_size,
-                                                    shuffle=False,
-                                                    num_workers=args.workers,
-                                                    pin_memory=True)
-        criterion = nn.CrossEntropyLoss()
+    workbench = utils.get_save_path(args)
+    
+    arc_model_path_list = []
+    if args['DIR'] == 'random':
+        number = args['NUMBER_RANDOM']
+        for common_edges in args['COMMON_EDGES']:
+            folder = workbench + f'/random/amount={common_edges}'
+            arc_path = folder + f'/arc_{number}.json'
+            mod_path = folder + f'/mod_{number}.json'
+            arc_model_path_list.append((arc_path, mod_path))
 
-        top1 = AverageMeter("top1")
-        top5 = AverageMeter("top5")
-        losses = AverageMeter("losses")
 
-        # validation
-        softmax = nn.Softmax(dim=1)
-        for step, (X, y) in enumerate(valid_loader):
-                X, y = X.to(device, non_blocking=True), y.to(device, non_blocking=True)
-                bs = X.size(0)
+    if args['DIR'] == 'optimal':
+        folder = workbench + f'/optimal'
+        for number in args['OPTIMAL_NUMBERS']:
+            arc_path = folder + f'/arc_{number}.json'
+            mod_path = folder + f'/mod_{number}.json'
+            arc_model_path_list.append((arc_path, mod_path))
+    
+    if args['DIR'] == 'hypernet':
+        number = args['HYPERNET_NUM']
+        folder = workbench + f'/hypernet/{number}'
+        for lam in args['HYPERNET_LAMBDAS']:
+            arc_path = folder + f'/lam={lam}/arc.json'
+            mod_path = folder + f'/lam={lam}/mod.json'
+            arc_model_path_list.append((arc_path, mod_path))
+    
+    if args['DIR'] == 'edges':
+        number = args['NUMBER_EDGES']
+        for lambd in args['EDGES_LAMBDAS']:
+            arc_path = workbench + f'/edges/lam={lambd}/arc_{number}.json'
+            mod_path = workbench + f'/edges/lam={lambd}/mod_{number}.json'
+            arc_model_path_list.append((arc_path, mod_path))
 
-                probabilities = softmax(models[0](X))
-                for i in range(1, len(models)):
-                    probabilities += softmax(models[i](X))
-                probabilities = probabilities / len(models)
-                loss = criterion(probabilities, y)
+    print('Architectures included into ensemble locations:')
+    for arc, mod in arc_model_path_list:
+        print(arc)
+    print()
 
-                accuracy = utils.accuracy(probabilities, y, topk=(1, 5))
-                losses.update(loss.item(), bs)
-                top1.update(accuracy["acc1"], bs)
-                top5.update(accuracy["acc5"], bs)
+    models = []
+    for arc, mod in arc_model_path_list:
+            with fixed_arch(arc):
+                model = utils.get_model(args)
+            model.eval()
+            model.to(device)
+            model.load_state_dict(torch.load(mod))
+            
+            models.append(model)
+    
 
-                if step % 10 == 0 or step == len(valid_loader) - 1:
-                    logger.info(
-                        "Valid: Step {:03d}/{:03d} Loss {losses.avg:.3f} "
-                        "Prec@(1,5) ({top1.avg:.1%}, {top5.avg:.1%})".format(
-                            step, len(valid_loader) - 1, losses=losses,
-                            top1=top1, top5=top5))
-
-        logger.info("Final best Prec@1 = {:.4%}".format(top1.avg))
-        res_dict_accur[Lambda] = top1.avg
-        print(res_dict_accur)
+    inference(models, valid_loader)

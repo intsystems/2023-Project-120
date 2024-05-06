@@ -40,10 +40,8 @@ def train(train_loader, model, optimizer, criterion, epoch, args):
         bs = x.size(0)
 
         optimizer.zero_grad()
-        logits, aux_logits = model(x)
+        logits = model(x)
         loss = criterion(logits, y)
-        if args['AUX_WEIGHT'] > 0.:
-            loss += args['AUX_WEIGHT'] * criterion(aux_logits, y)
         loss.backward()
         # gradient clipping
         nn.utils.clip_grad_norm_(model.parameters(), args['GRAD_CLIP'])

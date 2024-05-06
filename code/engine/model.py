@@ -486,13 +486,14 @@ class EdgeNES(DartsTrainer):
             self.ctrl_optim = torch.optim.Adam(list(ctrl_params.values()), arc_learning_rate, betas=(0.5, 0.999),
                                             weight_decay=1.0E-3)
         elif self.regime == 'hypernet':
-            self.init_network()
-            self.ctrl_optim = torch.optim.Adam(self.hypernetwork.parameters(), arc_learning_rate, betas=(0.5, 0.999),
-                                    weight_decay=1e-3)
             # hypernetwork params
             self.p_min = p_min
             self.p_max = p_max
             self.kernel_num = kernel_num
+
+            self.init_network()
+            self.ctrl_optim = torch.optim.Adam(self.hypernetwork.parameters(), arc_learning_rate, betas=(0.5, 0.999),
+                                    weight_decay=1e-3)
 
         # Regularizer params
         if self.regime in ['edges', 'hypernet']:

@@ -1,15 +1,15 @@
 # Which arcs?
-ALL:                True
-DIRS:                [random, optimal, hypernet] # random, optimal, hypernet, edges
+ALL:                False
+DIRS:                [optimal] # random, optimal, hypernet, edges
 
 # For edges
 LAMBDAS:            [1, 2]
 # For hypernet
-HYPERNET_NUMBERS:   [0]
+HYPERNET_NUMBERS:   [8]
 # For optimal
 OPTIMAL_NUMBERS:    [0]
 # For random
-COMMON_EDGES:       [0, 1]
+COMMON_EDGES:       [0, 1, 2]
 
 FORCE_RETRAIN:      True # Replace retrained arcs
 
@@ -17,6 +17,7 @@ FORCE_RETRAIN:      True # Replace retrained arcs
 LAYERS:             2
 CHANNELS:           16
 AUX_WEIGHT:         0.4
+N_CHOSEN:           1
 
 # Files
 SAVE_FOLDER:        checkpoints

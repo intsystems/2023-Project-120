@@ -1,0 +1,31 @@
+# Searching
+DIR:                optimal # random / optimal / hypernet / edges
+
+# For edges
+EDGES_LAMBDAS:      [1, 2] # lam={param}
+NUMBER_EDGES:       0 # lam={}/arc_{param}.json
+
+# For hypernet
+HYPERNET_NUM:       8
+HYPERNET_LAMBDAS:   [0, 1, 2, 3, 4] # {}/lam={param}
+
+# For optimal
+OPTIMAL_NUMBERS:    [0, 1, 2, 3] # arc_{param}.json
+
+# For random
+COMMON_EDGES:       [0, 1, 2] # amount={param}
+NUMBER_RANDOM:      0 # amount={}/arc_{}.json
+
+
+
+# Files
+SAVE_FOLDER:        checkpoints
+DATASET:            cifar100
+
+# Architecture
+N_CHOSEN:           1
+LAYERS:             2
+CHANNELS:           16
+
+WORKERS:            4
+BATCH_SIZE:         64

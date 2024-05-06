@@ -18,7 +18,6 @@ def accuracy(output, target, topk=(1,)):
     return res
 
 #==========================================================================
-import matplotlib.pyplot as plt
 from model import CNN
 import os
 import json
@@ -30,11 +29,11 @@ def make_dir(new_folder_path):
 
 def get_model(args):
     if args['DATASET'] == 'fashionmnist':
-        model = CNN(32, 1, args['CHANNELS'], 10, args['LAYERS'])
+        model = CNN(32, 1, args['CHANNELS'], 10, args['LAYERS'], n_chosen=args['N_CHOSEN'])
     if args['DATASET'] == 'cifar10':
-        model = CNN(32, 3, args['CHANNELS'], 10, args['LAYERS'])
+        model = CNN(32, 3, args['CHANNELS'], 10, args['LAYERS'], n_chosen=args['N_CHOSEN'])
     if args['DATASET'] == 'cifar100':
-        model = CNN(32, 3, args['CHANNELS'], 100, args['LAYERS'])
+        model = CNN(32, 3, args['CHANNELS'], 100, args['LAYERS'], n_chosen=args['N_CHOSEN'])
     return model
 
 def get_save_path(args):

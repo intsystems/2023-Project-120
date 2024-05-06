@@ -45,9 +45,6 @@ def make_dirs(args):
     if args['REGIME'] == 'random':
         for lambd in args['COMMON_EDGES']:
             utils.make_dir(path + f'/random/amount={lambd}')
-    if args['REGIME'] == 'random':
-        for lambd in args['COMMON_EDGES']:
-            utils.make_dir(path + f'/random/amount={lambd}')
     print()
 
 if __name__ == "__main__":
@@ -82,7 +79,7 @@ if __name__ == "__main__":
             final_architecture = trainer.export()
             print('Final architecture:', final_architecture)
             number = max([-1] + [int(file[4:file.find('.json')]) for file in os.listdir(path)]) + 1
-            save_path = path + f'/arc_{number}.json...'
+            save_path = path + f'/arc_{number}.json'
             print('Saving to ' + save_path + '...')
             utils.save_arc(final_architecture, save_path)
             print()
@@ -164,7 +161,7 @@ if __name__ == "__main__":
             batch_size=args['BATCH_SIZE'],
             log_frequency=args['LOG_FREQUENCY'],
             unrolled=args['UNROLLED'],
-            regime='edges',
+            regime='hypernet',
             learning_rate=args['LEARNING_RATE'],
             arc_learning_rate=args['ARC_LEARNING_RATE'],
             n_chosen=args['N_CHOSEN'],
@@ -181,9 +178,9 @@ if __name__ == "__main__":
         trainer.fit()
         for lambd in args['HYPERNET_LAMBDAS']:
             sampled_architecture = trainer.get_arch(lambd)
-            print('Architecture sampled for lambda = {lambd}:', sampled_architecture)
+            print(f'Architecture sampled for lambda = {lambd}:', sampled_architecture)
             # number = max([-1] + [int(file[4:file.find('.json')]) for file in os.listdir(path + f'/lam={lambd}')]) + 1
-            save_path = path + f'/lam={lambd}/arc.json'
+            save_path = path + f'/{number}/lam={lambd}/arc.json'
             print('Saving to ', save_path, '...')
             utils.save_arc(sampled_architecture, save_path)
             print()
