@@ -1,16 +1,11 @@
 from importlib import reload
 import json
 import logging
-from argparse import ArgumentParser
-import matplotlib.pyplot as plt
-
-import torch.nn as nn
 
 import datasets
 from model import EdgeNES
 
 import utils
-import yaml
 import os
 import numpy as np
 
@@ -56,6 +51,8 @@ if __name__ == "__main__":
 
     path = utils.get_save_path(args) + '/' + args['REGIME']
 
+    utils.fix_seed(args['SEED'])
+
     make_dirs(args)
 
     if args['REGIME'] == 'optimal':
@@ -74,12 +71,12 @@ if __name__ == "__main__":
                 learning_rate=args['LEARNING_RATE'],
                 arc_learning_rate=args['ARC_LEARNING_RATE'],
                 n_chosen=args['N_CHOSEN'],
+                number= max([-1] + [utils.get_number_from_s(file) for file in os.listdir(path)]) + 1
             )
-            trainer.fit()
+            trainer.fit(args)
             final_architecture = trainer.export()
             print('Final architecture:', final_architecture)
-            number = max([-1] + [int(file[4:file.find('.json')]) for file in os.listdir(path)]) + 1
-            save_path = path + f'/arc_{number}.json'
+            save_path = path + f'/arc_{trainer.number}.json'
             print('Saving to ' + save_path + '...')
             utils.save_arc(final_architecture, save_path)
             print()
@@ -100,7 +97,7 @@ if __name__ == "__main__":
                 new_arc_dict[f'reduce_n{node}_switch'] = [new_parent]
                 new_arc_dict[f"reduce_n{node}_p{new_parent}"] = get_random_operation()
             print('Final architecture:', new_arc_dict)
-            number = max([-1] + [int(file[4:file.find('.json')]) for file in os.listdir(path + f'/amount={lambd}')]) + 1
+            number = max([-1] + [utils.get_number_from_s(file) for file in os.listdir(path + f'/amount={lambd}')]) + 1
             save_path = path + f'/amount={lambd}/arc_{number}.json'
             print('Saving to ', save_path + '...')
             utils.save_arc(new_arc_dict, save_path)
@@ -133,10 +130,10 @@ if __name__ == "__main__":
                 t_end=args['T_END'],
                 lambd=lambd,
             )
-            trainer.fit()
+            trainer.fit(args)
             final_architecture = trainer.export()
             print('Final architecture:', final_architecture)
-            number = max([-1] + [int(file[4:file.find('.json')]) for file in os.listdir(path + f'/lam={lambd}')]) + 1
+            number = max([-1] + [utils.get_number_from_s(file) for file in os.listdir(path + f'/lam={lambd}')]) + 1
             save_path = path + f'/lam={lambd}/arc_{number}.json'
             print('Saving to ', save_path, '...')
             utils.save_arc(final_architecture, save_path)
@@ -174,8 +171,9 @@ if __name__ == "__main__":
             p_min=args['P_MIN'],
             p_max=args['P_MAX'],
             kernel_num=args['KERNEL_NUM'],
+            number=number
         )
-        trainer.fit()
+        trainer.fit(args)
         for lambd in args['HYPERNET_LAMBDAS']:
             sampled_architecture = trainer.get_arch(lambd)
             print(f'Architecture sampled for lambda = {lambd}:', sampled_architecture)

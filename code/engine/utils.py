@@ -22,6 +22,12 @@ from model import CNN
 import os
 import json
 import yaml
+import torch
+import numpy as np
+
+def fix_seed(seed):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
 def make_dir(new_folder_path):
     if not os.path.exists(new_folder_path):
@@ -105,3 +111,22 @@ def common_edges(left, right):
             if left[key] == right[key]:
                 same += 1
     return same
+
+def get_number_from_s(s):
+    first = s.find('_')
+    second = s.find('_', first + 1)
+    if first == -1:
+        return None
+    if second == -1:
+        second = s.find('.', first + 1)
+    return int(s[first + 1:second])
+
+def get_epoch_from_s(s):
+    first = s.find('e')
+    dot = s.find('.')
+    if first == -1:
+        return None
+    return int(s[first+1:dot])
+
+def get_lam_from_dir(dir):
+    return float(dir[4:])

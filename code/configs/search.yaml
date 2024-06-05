@@ -1,12 +1,15 @@
+SEED:               123
+
 # Searching
-REGIME:             hypernet # random / optimal / hypernet / edges
+REGIME:             random # random / optimal / hypernet / edges
+SAVE_EACH_EPOCH:    False
 # For edges and hypernet
 WEIGHT_START:       0.3
 WEIGHT_END:         3
 T_START:            1
 T_END:              0.05
 TAU:                0.99
-OPTIMAL_NUMBER:     0 # in {SAVE_FOLDER}/{dataset}/optimal
+OPTIMAL_NUMBER:     7 # in {SAVE_FOLDER}/{dataset}/optimal
 # For edges
 LAMBDAS:            [1, 2]
 # For hypernet
@@ -15,9 +18,9 @@ HYPERNET_LAMBDAS:   [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]
 P_MIN:              0
 P_MAX:              4.2
 # For optimal
-OPTIMAL_AMOUNT:     1
+OPTIMAL_AMOUNT:     21
 # For random
-COMMON_EDGES:       [0, 1, 2, 3]
+COMMON_EDGES:       [0, 1, 2, 3, 4]
 
 
 # Files
@@ -31,7 +34,7 @@ CHANNELS:           10
 UNROLLED:           False
 
 # Optimization
-EPOCHS:             1
+EPOCHS:             150
 BATCH_SIZE:         64
 LOG_FREQUENCY:      50
 VISUALIZATION:      False

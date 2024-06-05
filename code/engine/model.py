@@ -8,6 +8,7 @@ import torch.nn as nn
 
 import ops as ops
 from nni.retiarii.nn.pytorch import LayerChoice, InputChoice
+import os
 
 class AuxiliaryHead(nn.Module):
     """ Auxiliary head in 2/3 place of network to let the gradient flow well """
@@ -286,15 +287,13 @@ class PWLinear(nn.Module):
 
         self.pivots = nn.Parameter(self.pivots)
 
-            
     def forward(self, lam):
-        self.pivots
 
         right_index = torch.searchsorted(self.pivots, lam, side='right')
         left_index = right_index - 1
 
         ret = {}
-        left_pivot = (self.P_MIN if left_index <= -1 else self.pivots[left_index])
+        left_pivot = (self.P_MIN  if left_index <= -1 else self.pivots[left_index])
         left = self.alphas[left_index + 1]() # left_params
         right_pivot = (self.P_MAX if right_index >= self.N - 2 else self.pivots[right_index])
         right = self.alphas[right_index + 1]() # right_params
@@ -436,7 +435,9 @@ class EdgeNES(DartsTrainer):
                  tau=None,
                  optimal_arc_dict=None,
                  n_chosen=2,
+                 number=0,
                  ):
+        self.number = number
         assert regime in ['optimal', 'hypernet', 'edges'], 'Regime of model shold be optimal or hypernet or edges'
 
         self.model = model
@@ -661,7 +662,7 @@ class EdgeNES(DartsTrainer):
     def warmup_t(self, epoch, epochs):
         return self.t_start + (epoch / epochs) * (self.t_end - self.t_start)
                 
-    def fit(self):
+    def fit(self, args):
         for i in range(self.num_epochs):
             if self.regime in ['edges', 'hypernet']:
                 self.weight = self.warmup_weight(i, self.num_epochs)
@@ -671,3 +672,21 @@ class EdgeNES(DartsTrainer):
             #     writer.add('weight', i, self.weight)
             #     writer.add('tempreture', i, self.t_beta)
             self._train_one_epoch(i)
+            path = utils.get_save_path(args) + '/' + args['REGIME']
+            if args['SAVE_EACH_EPOCH'] and self.regime == 'optimal':
+                final_architecture = self.export()
+                print('Final architecture:', final_architecture)
+                save_path = path + f'/arc_{self.number}_e{i + 1}.json'
+                print('Saving to ' + save_path + '...')
+                utils.save_arc(final_architecture, save_path)
+                print()
+
+            if args['SAVE_EACH_EPOCH'] and self.regime == 'hypernet':
+                for lambd in args['HYPERNET_LAMBDAS']:
+                    sampled_architecture = self.get_arch(lambd)
+                    print(f'Architecture sampled for lambda = {lambd}:', sampled_architecture)
+                    # number = max([-1] + [int(file[4:file.find('.json')]) for file in os.listdir(path + f'/lam={lambd}')]) + 1
+                    save_path = path + f'/{self.number}/lam={lambd}/arc_e{i + 1}.json'
+                    print('Saving to ', save_path, '...')
+                    utils.save_arc(sampled_architecture, save_path)
+                    print()

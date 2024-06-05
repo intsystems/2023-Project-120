@@ -1,17 +1,20 @@
+SEED:               123
+
 # Which arcs?
 ALL:                False
-DIRS:                [optimal] # random, optimal, hypernet, edges
+DIRS:                [random] # random, optimal, hypernet, edges
 
 # For edges
 LAMBDAS:            [1, 2]
 # For hypernet
-HYPERNET_NUMBERS:   [8]
+HYPERNET_NUMBERS:   [4]
+HYPERNET_LAMBDAS:   [1, 2, 4]
 # For optimal
 OPTIMAL_NUMBERS:    [0]
 # For random
-COMMON_EDGES:       [0, 1, 2]
+COMMON_EDGES:       [0]
 
-FORCE_RETRAIN:      True # Replace retrained arcs
+FORCE_RETRAIN:      False # Replace retrained arcs
 
 # Setup
 LAYERS:             2

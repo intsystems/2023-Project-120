@@ -172,6 +172,8 @@ def collect_all_folder(folder):
 if __name__ == '__main__':
     args = utils.get_config('configs/retrain.yaml')
 
+    utils.fix_seed(args['SEED'])
+
     print('Loading dataset...')
     dataset_train, dataset_valid = datasets.get_dataset(args['DATASET'])
     print()
@@ -181,8 +183,8 @@ if __name__ == '__main__':
     if args['ALL'] == True:
         arcs_for_retrain = collect_all(workbench)
     else:
+        arcs_for_retrain = set()
         for dir in args['DIRS']:
-            arcs_for_retrain = set()
             if dir == 'random':
                 for common_edges in args['COMMON_EDGES']:
                     folder = workbench + f'/random/amount={common_edges}'
@@ -190,6 +192,14 @@ if __name__ == '__main__':
             if dir == 'optimal':
                 folder = workbench + f'/optimal'
                 arcs_for_retrain.update(collect_all_folder(folder))
+
+                # for file in os.listdir(folder):
+                #     epoch = utils.get_epoch_from_s(file)
+                #     number = utils.get_number_from_s(file)
+                #     if epoch is None or file[:3] != 'arc':
+                #         continue
+                #     elif (epoch == 1 or epoch % 5 == 0) and number in args['OPTIMAL_NUMBERS']:
+                #         arcs_for_retrain.update({folder + '/' + file})
             if dir == 'hypernet':
                 for number in args['HYPERNET_NUMBERS']:
                     # print('ASDASDASDAD', workbench + f'/hypernet/{number}')
@@ -197,6 +207,16 @@ if __name__ == '__main__':
                         arc_path = workbench + f'/hypernet/{number}/' + lam_dir + '/arc.json'
                         if os.path.isfile(arc_path):
                             arcs_for_retrain.add(arc_path)
+
+                        # if utils.get_lam_from_dir(lam_dir) not in args['HYPERNET_LAMBDAS']:
+                        #     continue
+                        # for file in os.listdir(workbench + f'/hypernet/{number}/' + lam_dir):
+                        #     epoch = utils.get_epoch_from_s(file)
+                        #     if epoch is None or file[:3] != 'arc':
+                        #         continue
+                        #     arc_path = workbench + f'/hypernet/{number}/' + lam_dir + '/' + file
+                        #     if epoch == 1 or epoch % 15 == 0:
+                        #         arcs_for_retrain.add(arc_path)
             if dir == 'edges':
                 for lambdas in args['LAMBDAS']:
                     folder = workbench + f'/random/amount={common_edges}'
@@ -216,6 +236,8 @@ if __name__ == '__main__':
     print('Arcs that will be retrained:')
     for arc_path in sorted(list(arcs_for_retrain)):
         print(arc_path)
+    print(f'Total amount of architectures to retrain = {len(arcs_for_retrain)}')
+    print(f'Estimated time = {len(arcs_for_retrain) * 5} (min)')
     print()
 
     res_dict = {}
