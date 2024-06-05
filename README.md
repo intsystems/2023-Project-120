@@ -39,7 +39,7 @@ Demonstration includes:
 
 Architectural space can be viwed as a continious space where architectures differ in terms of edges. The further architecture is from the optimal one, the worse it preforms.
 
-<img src="https://github.com/intsystems/2023-Project-120/blob/master/figures/fig1.jpeg" width="300" height="300">
+<img src="https://github.com/intsystems/2023-Project-120/blob/master/paper/figures/fig1.jpeg" width="300" height="300">
 
 Our method aims to find a solution to sample architectures to be included into ensemble in one shoot under assumptions introduced by the picture above.
 
